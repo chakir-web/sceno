@@ -1,0 +1,112 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useCart, useI18n } from "@/components/providers";
+import { Media } from "@/components/store/media";
+import { unitPrice } from "@/lib/pricing";
+import { formatMoney } from "@/lib/utils";
+import type { CatalogProduct } from "@/types/commerce";
+
+export function Gallery({ product }: { product: CatalogProduct }) {
+  const { dict } = useI18n();
+  const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState(false);
+  const images = product.images.length ? product.images : [{ id: "empty", url: "", alt: product.name }];
+  const current = images[index] ?? images[0];
+  return (
+    <div>
+      <button type="button" className="relative block aspect-[4/5] w-full bg-mist" onClick={() => current?.url && setZoom(true)} aria-label={dict.a11y.zoom}>
+        <Media src={current?.url || null} alt={current?.alt || product.name} priority />
+      </button>
+      {images.length > 1 ? (
+        <div className="mt-3 grid grid-cols-5 gap-2">
+          {images.map((image, imageIndex) => (
+            <button key={image.id} type="button" className={`relative aspect-square bg-mist ${imageIndex === index ? "outline outline-1 outline-champagne" : ""}`} onClick={() => setIndex(imageIndex)}>
+              <Media src={image.url || null} alt={image.alt} />
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {zoom && current?.url ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/80 p-6" onClick={() => setZoom(false)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={current.url} alt={current.alt} className="max-h-[88vh] max-w-5xl object-contain" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function AddToCart({ product }: { product: CatalogProduct }) {
+  const { dict, locale } = useI18n();
+  const { add } = useCart();
+  const variants = product.variants.filter((variant) => variant.isActive);
+  const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const variant = variants.find((item) => item.id === variantId) ?? variants[0];
+  const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : unitPrice(product.priceMad, product.promoPriceMad, null);
+  const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
+  const colors = useMemo(() => variants.filter((item) => !variant?.size || item.size === variant.size), [variant, variants]);
+  if (!variant) return <p className="text-sm">{dict.product.unavailable}</p>;
+
+  return (
+    <div className="mt-8 grid gap-5">
+      <div>
+        <p className="font-display text-4xl">{formatMoney(price, locale)}</p>
+        {price < product.priceMad ? <p className="text-sm text-stone line-through">{formatMoney(product.priceMad, locale)}</p> : null}
+      </div>
+      {sizes.length > 0 ? (
+        <label className="grid gap-2 text-sm">
+          {dict.product.size}
+          <select className="field" value={variant.size ?? ""} onChange={(event) => {
+            const next = variants.find((item) => item.size === event.target.value);
+            if (next) setVariantId(next.id);
+          }}>
+            {sizes.map((size) => <option key={size} value={size ?? ""}>{size}</option>)}
+          </select>
+        </label>
+      ) : null}
+      {colors.some((item) => item.color) ? (
+        <div>
+          <p className="text-sm">{dict.product.color}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {colors.map((item) => (
+              <button key={item.id} type="button" className={`border px-3 py-2 text-sm ${item.id === variant.id ? "border-ink" : "border-line"}`} onClick={() => setVariantId(item.id)}>
+                <span className="me-2 inline-block h-3 w-3" style={{ background: item.colorHex || "#C6B69B" }} />
+                {item.color}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <p className="text-sm text-stone">{dict.product.stock}: {variant.stockQuantity}{variant.stockQuantity > 0 && variant.stockQuantity <= product.lowStockThreshold ? ` · ${dict.product.lowStock}` : ""}</p>
+      <div className="flex items-center gap-3">
+        <button type="button" className="btn btn-ghost" aria-label={dict.a11y.decreaseQty} onClick={() => setQuantity((value) => Math.max(1, value - 1))}>−</button>
+        <span className="min-w-8 text-center">{quantity}</span>
+        <button type="button" className="btn btn-ghost" aria-label={dict.a11y.increaseQty} onClick={() => setQuantity((value) => Math.min(variant.stockQuantity, 20, value + 1))}>+</button>
+      </div>
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={variant.stockQuantity < 1}
+        onClick={() => {
+          add({
+            productId: product.id,
+            variantId: variant.id,
+            quantity: Math.min(quantity, variant.stockQuantity),
+            name: product.name,
+            slug: product.slug,
+            image: product.images[0]?.url ?? null,
+            unitPrice: price,
+            variantLabel: [variant.size, variant.color].filter(Boolean).join(" / "),
+          });
+          setAdded(true);
+        }}
+      >
+        {added ? dict.product.added : dict.product.add}
+      </button>
+      <p className="text-xs text-stone">{dict.product.sku}: {variant.sku}</p>
+    </div>
+  );
+}

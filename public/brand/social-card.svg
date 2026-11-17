@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#F5F1E9"/>
+  <rect x="48" y="48" width="1104" height="534" stroke="#171717" stroke-width="1"/>
+  <path d="M140 360h120" stroke="#171717" stroke-width="2"/>
+  <path d="M160 360V250" stroke="#171717" stroke-width="2"/>
+  <path d="M240 360V250" stroke="#171717" stroke-width="2"/>
+  <path d="M160 250c0-36 80-36 80 0" stroke="#A58B62" stroke-width="2"/>
+  <path d="M200 214 206.5 220.5 200 227 193.5 220.5Z" fill="#A58B62"/>
+  <g fill="none" stroke="#171717" stroke-width="3">
+    <path d="M320 250h56v32H328v32h56"/>
+    <path d="M460 250h-64v72h64"/>
+    <path d="M500 250h72M500 286h52M500 322h72"/>
+    <path d="M610 322V250l68 72V250"/>
+    <path d="M720 250h72v72h-72z"/>
+  </g>
+  <text x="320" y="420" fill="#A58B62" font-family="Georgia, serif" font-size="28" letter-spacing="6">MAISON D'OBJETS · MAROC</text>
+</svg>
