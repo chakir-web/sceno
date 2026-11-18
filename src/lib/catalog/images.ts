@@ -12,3 +12,13 @@ export function imagesForColor(images: CatalogImage[], color: string | null | un
   if (specific.length) return specific;
   return shared.length ? shared : images;
 }
+
+export function galleryImages(images: CatalogImage[], color: string | null | undefined) {
+  const visible = images.filter((image) => image.url);
+  const key = colorKey(color);
+  if (!key) return visible;
+  const specific = visible.filter((image) => colorKey(image.color) === key);
+  if (!specific.length) return visible;
+  const rest = visible.filter((image) => colorKey(image.color) !== key);
+  return [...specific, ...rest];
+}
