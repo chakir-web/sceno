@@ -2,40 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
-import { Media } from "@/components/store/media";
 import { unitPrice } from "@/lib/pricing";
 import { formatMoney } from "@/lib/utils";
 import type { CatalogProduct } from "@/types/commerce";
 
-export function Gallery({ product }: { product: CatalogProduct }) {
-  const { dict } = useI18n();
-  const [index, setIndex] = useState(0);
-  const [zoom, setZoom] = useState(false);
-  const images = product.images.length ? product.images : [{ id: "empty", url: "", alt: product.name }];
-  const current = images[index] ?? images[0];
-  return (
-    <div>
-      <button type="button" className="relative block aspect-[4/5] w-full bg-mist" onClick={() => current?.url && setZoom(true)} aria-label={dict.a11y.zoom}>
-        <Media src={current?.url || null} alt={current?.alt || product.name} priority />
-      </button>
-      {images.length > 1 ? (
-        <div className="mt-3 grid grid-cols-5 gap-2">
-          {images.map((image, imageIndex) => (
-            <button key={image.id} type="button" className={`relative aspect-square bg-mist ${imageIndex === index ? "outline outline-1 outline-champagne" : ""}`} onClick={() => setIndex(imageIndex)}>
-              <Media src={image.url || null} alt={image.alt} />
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {zoom && current?.url ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/80 p-6" onClick={() => setZoom(false)}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={current.url} alt={current.alt} className="max-h-[88vh] max-w-5xl object-contain" />
-        </div>
-      ) : null}
-    </div>
-  );
-}
+export { Gallery } from "@/components/store/gallery";
 
 export function AddToCart({ product }: { product: CatalogProduct }) {
   const { dict, locale } = useI18n();

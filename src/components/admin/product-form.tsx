@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
-import { saveProduct, uploadProductImage, deleteProductImage } from "@/lib/actions/catalog";
+import { saveProduct, uploadProductImage, deleteProductImage, reorderProductImages } from "@/lib/actions/catalog";
 import { Notice } from "@/components/office/indicators";
 import { useI18n } from "@/components/providers";
 import { productInputSchema } from "@/lib/validations/commerce";
@@ -39,18 +39,39 @@ function ProductPhotos({
     event.preventDefault();
     remember();
     const form = event.currentTarget;
-    const data = new FormData(form);
-    data.set("productId", productId);
+    const files = [...(form.elements.namedItem("file") as HTMLInputElement).files ?? []];
+    if (!files.length) return;
     setBusy(true);
-    const result = await uploadProductImage(data);
-    setBusy(false);
-    if (!result.ok) {
-      setNotice(messageFor(dict, result.code));
-      return;
+    const added: CatalogImage[] = [];
+    for (const file of files) {
+      const data = new FormData();
+      data.set("productId", productId);
+      data.set("file", file);
+      const result = await uploadProductImage(data);
+      if (!result.ok) {
+        setNotice(messageFor(dict, result.code));
+        break;
+      }
+      added.push(result.image);
     }
-    setPhotos((current) => [...current, result.image]);
-    setNotice("");
+    setBusy(false);
+    if (added.length) setPhotos((current) => [...current, ...added]);
+    if (added.length === files.length) setNotice("");
     form.reset();
+  }
+
+  async function movePhoto(from: number, delta: number) {
+    const target = from + delta;
+    if (target < 0 || target >= photos.length) return;
+    const next = [...photos];
+    const [item] = next.splice(from, 1);
+    next.splice(target, 0, item);
+    setPhotos(next);
+    const data = new FormData();
+    data.set("productId", productId);
+    data.set("ids", next.map((image) => image.id).join(","));
+    await reorderProductImages(data);
+    remember();
   }
 
   async function removePhoto(image: CatalogImage) {
@@ -68,19 +89,22 @@ function ProductPhotos({
   return (
     <div className="border border-line p-4">
       <h2 className="font-display text-3xl">{copy.images}</h2>
-      <div className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-6">
-        {photos.map((image) => (
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+        {photos.map((image, imageIndex) => (
           <div key={image.id}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.url} alt={image.alt} className="aspect-square object-cover" />
-            <button className="mt-2 text-xs" type="button" disabled={busy} onClick={() => removePhoto(image)}>
-              {copy.removeImage}
-            </button>
+            {imageIndex === 0 ? <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-champagne">{copy.mainPhoto}</p> : null}
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <button type="button" disabled={busy || imageIndex === 0} onClick={() => movePhoto(imageIndex, -1)}>{copy.moveUp}</button>
+              <button type="button" disabled={busy || imageIndex === photos.length - 1} onClick={() => movePhoto(imageIndex, 1)}>{copy.moveDown}</button>
+              <button type="button" disabled={busy} onClick={() => removePhoto(image)}>{copy.removeImage}</button>
+            </div>
           </div>
         ))}
       </div>
-      <form className="mt-4 flex gap-3" onSubmit={addPhoto}>
-        <input name="file" type="file" accept="image/jpeg,image/png,image/webp" />
+      <form className="mt-4 flex flex-wrap gap-3" onSubmit={addPhoto}>
+        <input name="file" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         <button className="btn btn-ghost" type="submit" disabled={busy}>{copy.addImages}</button>
       </form>
       {notice ? <div className="mt-3"><Notice tone="danger">{notice}</Notice></div> : null}
