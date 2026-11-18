@@ -45,7 +45,20 @@ type ItemRow = {
 
 type NoteRow = { id: string; body: string; created_at: string; profiles?: { full_name: string } | { full_name: string }[] | null };
 type HistoryRow = { id: string; kind: string; from_status: string | null; to_status: string; note: string | null; created_at: string };
-type ShipmentRow = { carrier_name: string; tracking_number: string; carrier_fee_mad: number | string | null; shipped_at: string | null };
+type ShipmentRow = {
+  carrier_name: string;
+  tracking_number: string;
+  carrier_fee_mad: number | string | null;
+  shipped_at: string | null;
+  ozone_parcel_id?: string | null;
+  ozone_status?: string | null;
+  ozone_status_label?: string | null;
+  ozone_last_event_at?: string | null;
+  ozone_synced_at?: string | null;
+  ozone_error?: string | null;
+  ozone_dispatch_started_at?: string | null;
+  ozone_delivery_note_ref?: string | null;
+};
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -77,6 +90,14 @@ export function mapOrder(row: OrderRow, detailed = false): OrderRecord {
     trackingNumber: shipment?.tracking_number || null,
     carrierFeeMad: shipment?.carrier_fee_mad == null ? null : asNumber(shipment.carrier_fee_mad),
     shippedAt: shipment?.shipped_at ?? null,
+    ozoneParcelId: shipment?.ozone_parcel_id ?? null,
+    ozoneStatus: shipment?.ozone_status ?? null,
+    ozoneStatusLabel: shipment?.ozone_status_label ?? null,
+    ozoneLastEventAt: shipment?.ozone_last_event_at ?? null,
+    ozoneSyncedAt: shipment?.ozone_synced_at ?? null,
+    ozoneError: shipment?.ozone_error ?? null,
+    ozoneDispatchStartedAt: shipment?.ozone_dispatch_started_at ?? null,
+    ozoneDeliveryNoteRef: shipment?.ozone_delivery_note_ref ?? null,
   };
   if (!detailed) return order;
   order.items = asArray<ItemRow>(row.order_items).map((item) => ({
@@ -120,7 +141,7 @@ const detailSelect = `
   order_items (id, product_id, variant_id, name_fr, name_ar, variant_label, sku, unit_price_mad, quantity, line_total_mad),
   order_notes (id, body, created_at, profiles (full_name)),
   order_status_history (id, kind, from_status, to_status, note, created_at),
-  shipments (carrier_name, tracking_number, carrier_fee_mad, shipped_at)
+  shipments (carrier_name, tracking_number, carrier_fee_mad, shipped_at, ozone_parcel_id, ozone_status, ozone_status_label, ozone_last_event_at, ozone_synced_at, ozone_error, ozone_dispatch_started_at, ozone_delivery_note_ref)
 `;
 
 export async function listOrders(filters: {

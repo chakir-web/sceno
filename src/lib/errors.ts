@@ -17,6 +17,10 @@ const codes = [
   "file_type",
   "file_size",
   "duplicate",
+  "not_confirmed",
+  "ozone_exists",
+  "ozone_busy",
+  "city_unknown",
 ] as const;
 
 export type ErrorCode = (typeof codes)[number];
@@ -35,7 +39,7 @@ export function statusFor(code: ErrorCode) {
   if (code === "forbidden") return 403;
   if (code === "rate_limited") return 429;
   if (code === "not_configured") return 503;
-  if (code === "insufficient_stock" || code === "product_unavailable" || code === "duplicate") return 409;
+  if (code === "insufficient_stock" || code === "product_unavailable" || code === "duplicate" || code === "ozone_exists" || code === "ozone_busy") return 409;
   if (code === "generic") return 500;
   return 400;
 }

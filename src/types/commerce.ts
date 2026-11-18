@@ -137,6 +137,14 @@ export type OrderRecord = {
   trackingNumber?: string | null;
   carrierFeeMad?: number | null;
   shippedAt?: string | null;
+  ozoneParcelId?: string | null;
+  ozoneStatus?: string | null;
+  ozoneStatusLabel?: string | null;
+  ozoneLastEventAt?: string | null;
+  ozoneSyncedAt?: string | null;
+  ozoneError?: string | null;
+  ozoneDispatchStartedAt?: string | null;
+  ozoneDeliveryNoteRef?: string | null;
 };
 
 export type Carrier = {

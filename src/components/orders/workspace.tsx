@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ConfirmButton } from "@/components/confirm-button";
 import { PrintButton } from "@/components/print-button";
 import { StatusPill } from "@/components/office/indicators";
-import { addNoteForm, assignOrderForm, transitionOrderAction, updateDeliveryForm, saveShipmentForm } from "@/lib/actions/orders";
+import { OzoneSend } from "@/components/orders/ozone-send";
+import { addNoteForm, assignOrderForm, transitionOrderAction, updateDeliveryForm, saveShipmentForm, syncOzoneForm } from "@/lib/actions/orders";
+import { getCities, matchOzoneCity, ozoneConfigured } from "@/lib/shipping/ozone";
 import { getI18n } from "@/lib/i18n/server";
 import { statusLabel } from "@/lib/i18n";
 import { phoneHref } from "@/lib/phone";
@@ -23,6 +25,22 @@ export async function OrderWorkspace({
 }) {
   const { locale, dict } = await getI18n();
   const name = locale === "ar" ? "nameAr" : "nameFr";
+  const dispatchAge = order.ozoneDispatchStartedAt ? Date.now() - new Date(order.ozoneDispatchStartedAt).getTime() : Number.POSITIVE_INFINITY;
+  const ozoneBusy = !order.trackingNumber && !order.ozoneParcelId && dispatchAge < 2 * 60 * 1000;
+  const canSendOzone = mode === "admin" && order.confirmationStatus === "confirmed" && !order.trackingNumber && !order.ozoneParcelId && !ozoneBusy;
+  let ozoneCities: { id: string; name: string }[] = [];
+  let ozoneCityId = "";
+  let ozoneCityUnknown = false;
+  let ozoneCityError = "";
+  if (canSendOzone && ozoneConfigured()) {
+    const listed = await getCities();
+    if (!listed.ok) ozoneCityError = listed.message;
+    else {
+      ozoneCities = listed.cities.map((city) => ({ id: city.id, name: city.name }));
+      ozoneCityId = matchOzoneCity(order.city, listed.cities)?.id ?? "";
+      ozoneCityUnknown = !ozoneCityId;
+    }
+  }
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -104,6 +122,57 @@ export async function OrderWorkspace({
           />
         ))}
       </div>
+      {mode === "admin" ? (
+        <section className="grid gap-4 border border-line bg-ivory p-5">
+          <h2 className="font-display text-3xl">{dict.admin.shipments.ozoneTitle}</h2>
+          <dl className="grid gap-3 text-sm md:grid-cols-2">
+            <div><dt className="text-stone">{dict.admin.shipments.ozoneCarrier}</dt><dd>{order.carrierName || "—"}</dd></div>
+            <div><dt className="text-stone">{dict.admin.shipments.ozoneTracking}</dt><dd>{order.trackingNumber || "—"}</dd></div>
+            <div><dt className="text-stone">{dict.admin.shipments.ozoneParcelId}</dt><dd>{order.ozoneParcelId || "—"}</dd></div>
+            <div>
+              <dt className="text-stone">{dict.admin.shipments.ozoneStatus}</dt>
+              <dd>{order.ozoneStatusLabel || order.ozoneStatus || (order.ozoneSyncedAt && !order.ozoneError ? dict.admin.shipments.ozoneStatusUnknown : dict.admin.shipments.ozoneStatusEmpty)}</dd>
+            </div>
+            <div><dt className="text-stone">{dict.admin.shipments.ozoneSynced}</dt><dd>{order.ozoneSyncedAt ? formatDate(order.ozoneSyncedAt, locale) : "—"}</dd></div>
+            {order.ozoneError ? <div className="md:col-span-2"><dt className="text-stone">{dict.admin.shipments.ozoneError}</dt><dd>{order.ozoneError}</dd></div> : null}
+          </dl>
+          <div className="grid gap-3">
+            {!ozoneConfigured() ? <p className="text-sm text-stone">{dict.admin.shipments.ozonePending}</p> : null}
+            {canSendOzone && ozoneConfigured() && !ozoneCityError ? (
+              <OzoneSend
+                orderId={order.id}
+                cities={ozoneCities}
+                selectedCityId={ozoneCityId}
+                cityUnknown={ozoneCityUnknown}
+                labels={{
+                  send: dict.admin.shipments.ozoneSend,
+                  creating: dict.admin.shipments.ozoneCreating,
+                  created: dict.admin.shipments.ozoneCreated,
+                  city: dict.admin.shipments.ozoneCity,
+                  cityUnknown: dict.admin.shipments.ozoneCityUnknown,
+                  tracking: dict.admin.shipments.ozoneTracking,
+                  status: dict.admin.shipments.ozoneStatus,
+                  createdAt: dict.admin.shipments.ozoneCreatedAt,
+                  emptyStatus: dict.admin.shipments.ozoneStatusEmpty,
+                }}
+              />
+            ) : null}
+            {ozoneCityError ? <p className="text-sm text-red-900">{ozoneCityError}</p> : null}
+            {ozoneBusy ? <p className="text-sm text-stone">{dict.admin.shipments.ozoneBusy}</p> : null}
+            {order.trackingNumber ? <p className="text-sm">{dict.admin.shipments.ozoneCreated}</p> : null}
+            {order.trackingNumber ? (
+              <div className="flex flex-wrap gap-2">
+                <form action={syncOzoneForm}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <button className="btn btn-primary" type="submit">{dict.admin.shipments.ozoneSync}</button>
+                </form>
+                <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}`}>{dict.admin.shipments.ozoneDownload}</a>
+                <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}&inline=1`} target="_blank" rel="noreferrer">{dict.admin.shipments.ozonePrint}</a>
+              </div>
+            ) : !canSendOzone && !ozoneBusy ? <p className="text-sm text-stone">{dict.admin.shipments.ozoneNeedTracking}</p> : null}
+          </div>
+        </section>
+      ) : null}
       {mode === "admin" ? (
         <form action={saveShipmentForm} className="grid gap-3 border border-line bg-ivory p-5 md:grid-cols-3">
           <input type="hidden" name="orderId" value={order.id} />

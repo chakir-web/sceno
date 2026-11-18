@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/cart",
     "/checkout",
     "/track-order",
+    "/suivi-commande",
     ...products.map((product) => `/products/${product.slug}`),
     ...categories.data.map((category) => `/categories/${category.slug}`),
   ].map((path) => ({ url: `${base}${path}`, changeFrequency: "daily" as const, priority: path === "" ? 1 : 0.7 }));
