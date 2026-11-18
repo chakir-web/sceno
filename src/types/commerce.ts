@@ -15,6 +15,7 @@ export type CatalogImage = {
   id: string;
   url: string;
   alt: string;
+  color: string | null;
 };
 
 export type CatalogProduct = {

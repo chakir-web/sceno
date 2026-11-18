@@ -11,13 +11,13 @@ const productSelect = `
   id, slug, sku, price_mad, promo_price_mad, stock_quantity, low_stock_threshold,
   is_active, is_featured, is_new, category_id, created_at,
   product_translations (locale, name, short_description, description),
-  product_images (id, url, alt, sort_order),
+  product_images (id, url, alt, sort_order, color),
   product_variants (id, sku, size, color, color_hex, price_mad, stock_quantity, is_active),
   categories (id, slug, category_translations (locale, name))
 `;
 
 type Translation = { locale: string; name: string; short_description?: string; description?: string };
-type ImageRow = { id: string; url: string; alt: string; sort_order: number };
+type ImageRow = { id: string; url: string; alt: string; sort_order: number; color?: string | null };
 type VariantRow = {
   id: string;
   sku: string;
@@ -101,8 +101,8 @@ export function mapProduct(row: ProductRow, locale: Locale, includeInactive = fa
     descriptionFr: french?.description ?? "",
     descriptionAr: arabic?.description ?? "",
     images: asArray<ImageRow>(row.product_images)
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((image) => ({ id: image.id, url: image.url, alt: image.alt || current?.name || row.sku })),
+      .sort((a, b) => Number(Boolean(a.color)) - Number(Boolean(b.color)) || a.sort_order - b.sort_order)
+      .map((image) => ({ id: image.id, url: image.url, alt: image.alt || current?.name || row.sku, color: image.color?.trim() || null })),
     variants,
     createdAt: row.created_at,
   };

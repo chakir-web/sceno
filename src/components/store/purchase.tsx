@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
+import { imagesForColor } from "@/lib/catalog/images";
 import { unitPrice } from "@/lib/pricing";
+import { useProductColor } from "@/components/store/product-color";
 import { formatMoney } from "@/lib/utils";
 import type { CatalogProduct } from "@/types/commerce";
 
@@ -11,6 +13,7 @@ export { Gallery } from "@/components/store/gallery";
 export function AddToCart({ product }: { product: CatalogProduct }) {
   const { dict, locale } = useI18n();
   const { add } = useCart();
+  const setColor = useProductColor()?.setColor;
   const variants = product.variants.filter((variant) => variant.isActive);
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -21,6 +24,9 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
     return () => window.clearTimeout(timer);
   }, [added]);
   const variant = variants.find((item) => item.id === variantId) ?? variants[0];
+  useEffect(() => {
+    setColor?.(variant?.color ?? null);
+  }, [setColor, variant?.color]);
   const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : unitPrice(product.priceMad, product.promoPriceMad, null);
   const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
   const colors = useMemo(() => variants.filter((item) => !variant?.size || item.size === variant.size), [variant, variants]);
@@ -73,7 +79,7 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
             quantity: Math.min(quantity, variant.stockQuantity),
             name: product.name,
             slug: product.slug,
-            image: product.images[0]?.url ?? null,
+            image: imagesForColor(product.images, variant.color)[0]?.url ?? null,
             unitPrice: price,
             variantLabel: [variant.size, variant.color].filter(Boolean).join(" / "),
           });
@@ -114,7 +120,7 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             quantity: 1,
             name: product.name,
             slug: product.slug,
-            image: product.images[0]?.url ?? null,
+            image: imagesForColor(product.images, variant.color)[0]?.url ?? null,
             unitPrice: price,
             variantLabel,
           });

@@ -188,16 +188,17 @@ export async function uploadProductImage(formData: FormData) {
   });
   if (error) return fail("generic");
   const url = supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+  const color = String(formData.get("color") ?? "").trim();
   const { data: last } = await supabase.from("product_images").select("sort_order").eq("product_id", productId).order("sort_order", { ascending: false }).limit(1);
   const sortOrder = (last?.[0]?.sort_order ?? -1) + 1;
   const { data: image, error: insertError } = await supabase
     .from("product_images")
-    .insert({ product_id: productId, url, alt: file.name, sort_order: sortOrder })
-    .select("id, url, alt")
+    .insert({ product_id: productId, url, alt: file.name, sort_order: sortOrder, color: color || null })
+    .select("id, url, alt, color")
     .single();
   if (insertError || !image) return fail(errorCode(insertError));
   revalidateCatalog();
-  return { ok: true as const, image: { id: image.id as string, url: image.url as string, alt: image.alt as string } };
+  return { ok: true as const, image: { id: image.id as string, url: image.url as string, alt: image.alt as string, color: (image.color as string | null) ?? null } };
 }
 
 export async function reorderProductImages(formData: FormData) {

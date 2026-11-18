@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductColorProvider } from "@/components/store/product-color";
 import { AddToCart, Gallery } from "@/components/store/purchase";
 import { ProductCard } from "@/components/store/product-card";
 import { getI18n } from "@/lib/i18n/server";
@@ -23,6 +24,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <article>
       <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>
+      <ProductColorProvider product={product.data}>
       <div className="mt-6 grid items-start gap-10 lg:grid-cols-2">
         <Gallery product={product.data} />
         <div>
@@ -34,6 +36,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="mt-3 whitespace-pre-line text-sm leading-7">{product.data.description}</p>
         </div>
       </div>
+      </ProductColorProvider>
       {similar.length ? (
         <section className="mt-16">
           <h2 className="font-display text-4xl">{dict.product.similar}</h2>

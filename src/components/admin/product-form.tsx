@@ -2,14 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
-import { saveProduct, uploadProductImage, deleteProductImage, reorderProductImages } from "@/lib/actions/catalog";
+import { saveProduct, uploadProductImage } from "@/lib/actions/catalog";
+import { ColorPhotos } from "@/components/admin/color-photos";
 import { Notice } from "@/components/office/indicators";
 import { useI18n } from "@/components/providers";
 import { productInputSchema } from "@/lib/validations/commerce";
-import type { CatalogCategory, CatalogImage, CatalogProduct } from "@/types/commerce";
+import type { CatalogCategory, CatalogProduct } from "@/types/commerce";
 
 type Values = z.infer<typeof productInputSchema>;
 type Dict = ReturnType<typeof useI18n>["dict"];
@@ -20,104 +21,13 @@ function messageFor(dict: Dict, code: string) {
   return dict.errors[code as keyof typeof dict.errors] ?? dict.errors.generic;
 }
 
-function ProductPhotos({
-  productId,
-  images,
-  remember,
-}: {
-  productId: string;
-  images: CatalogImage[];
-  remember: () => void;
-}) {
-  const { dict } = useI18n();
-  const copy = dict.admin.products;
-  const [photos, setPhotos] = useState(images);
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function addPhoto(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    remember();
-    const form = event.currentTarget;
-    const files = [...(form.elements.namedItem("file") as HTMLInputElement).files ?? []];
-    if (!files.length) return;
-    setBusy(true);
-    const added: CatalogImage[] = [];
-    for (const file of files) {
-      const data = new FormData();
-      data.set("productId", productId);
-      data.set("file", file);
-      const result = await uploadProductImage(data);
-      if (!result.ok) {
-        setNotice(messageFor(dict, result.code));
-        break;
-      }
-      added.push(result.image);
-    }
-    setBusy(false);
-    if (added.length) setPhotos((current) => [...current, ...added]);
-    if (added.length === files.length) setNotice("");
-    form.reset();
-  }
-
-  async function movePhoto(from: number, delta: number) {
-    const target = from + delta;
-    if (target < 0 || target >= photos.length) return;
-    const next = [...photos];
-    const [item] = next.splice(from, 1);
-    next.splice(target, 0, item);
-    setPhotos(next);
-    const data = new FormData();
-    data.set("productId", productId);
-    data.set("ids", next.map((image) => image.id).join(","));
-    await reorderProductImages(data);
-    remember();
-  }
-
-  async function removePhoto(image: CatalogImage) {
-    remember();
-    const data = new FormData();
-    data.set("id", image.id);
-    data.set("productId", productId);
-    setBusy(true);
-    await deleteProductImage(data);
-    setBusy(false);
-    setPhotos((current) => current.filter((item) => item.id !== image.id));
-    setNotice("");
-  }
-
-  return (
-    <div className="border border-line p-4">
-      <h2 className="font-display text-3xl">{copy.images}</h2>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-        {photos.map((image, imageIndex) => (
-          <div key={image.id}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.alt} className="aspect-square object-cover" />
-            {imageIndex === 0 ? <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-champagne">{copy.mainPhoto}</p> : null}
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" disabled={busy || imageIndex === 0} onClick={() => movePhoto(imageIndex, -1)}>{copy.moveUp}</button>
-              <button type="button" disabled={busy || imageIndex === photos.length - 1} onClick={() => movePhoto(imageIndex, 1)}>{copy.moveDown}</button>
-              <button type="button" disabled={busy} onClick={() => removePhoto(image)}>{copy.removeImage}</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <form className="mt-4 flex flex-wrap gap-3" onSubmit={addPhoto}>
-        <input name="file" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-        <button className="btn btn-ghost" type="submit" disabled={busy}>{copy.addImages}</button>
-      </form>
-      {notice ? <div className="mt-3"><Notice tone="danger">{notice}</Notice></div> : null}
-    </div>
-  );
-}
-
 export function ProductForm({ product, categories }: { product: CatalogProduct | null; categories: CatalogCategory[] }) {
   const { dict } = useI18n();
   const router = useRouter();
   const copy = dict.admin.products;
   const draftKey = product?.id ?? "new";
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [photosOpen, setPhotosOpen] = useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(productInputSchema),
     defaultValues: drafts.get(draftKey) ?? (product ? {
@@ -178,8 +88,28 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
     return () => subscription.unsubscribe();
   }, [draftKey, form]);
 
+  function openPhotos() {
+    setPhotosOpen(true);
+    window.setTimeout(() => document.getElementById("photos-couleur")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  useEffect(() => {
+    if (window.location.hash !== "#photos-couleur") return;
+    setPhotosOpen(true);
+    window.setTimeout(() => document.getElementById("photos-couleur")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }, []);
+
+  const draftColors = form.watch("variants").map((variant) => variant.color ?? "");
+
   return (
     <div className="grid gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 border border-ink bg-mist p-4">
+        <div>
+          <p className="font-display text-3xl">{copy.photosByColor}</p>
+          <p className="mt-1 max-w-xl text-sm text-stone">{copy.photosByColorHint}</p>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={openPhotos}>{copy.managePhotosByColor}</button>
+      </div>
       <form
         className="grid gap-6"
         onSubmit={form.handleSubmit(async (values) => {
@@ -204,7 +134,7 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
           }
           drafts.delete(draftKey);
           drafts.delete(result.id);
-          router.push(`/admin/products/${result.id}`);
+          router.push(`/admin/products/${result.id}#photos-couleur`);
         })}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -264,7 +194,14 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <button className="btn btn-primary w-fit" type="submit">{dict.common.save}</button>
       </form>
-      {product ? <ProductPhotos productId={product.id} images={product.images} remember={remember} /> : null}
+      {photosOpen ? (
+        product ? <ColorPhotos product={product} draftColors={draftColors} /> : (
+          <div id="photos-couleur" className="border border-line p-4">
+            <h2 className="font-display text-3xl">{copy.photosByColor}</h2>
+            <p className="mt-2 text-sm">{copy.saveBeforePhotos}</p>
+          </div>
+        )
+      ) : null}
     </div>
   );
 }

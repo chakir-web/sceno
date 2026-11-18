@@ -4,7 +4,9 @@ import { ChevronLeft, ChevronRight, Minus, Plus, X, ZoomIn } from "lucide-react"
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/components/providers";
+import { imagesForColor } from "@/lib/catalog/images";
 import { Media } from "@/components/store/media";
+import { useProductColor } from "@/components/store/product-color";
 import type { CatalogProduct } from "@/types/commerce";
 
 type Frame = { id: string; url: string; alt: string };
@@ -19,10 +21,15 @@ function clampScale(value: number) {
 
 export function Gallery({ product }: { product: CatalogProduct }) {
   const { dict, locale } = useI18n();
-  const available = product.images.filter((image) => image.url);
+  const selectedColor = useProductColor()?.color ?? null;
+  const available = imagesForColor(product.images, selectedColor).filter((image) => image.url);
   const images: Frame[] = available.length ? available : [{ id: "empty", url: "", alt: product.name }];
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setIndex(0);
+    setOpen(false);
+  }, [selectedColor]);
   const many = images.length > 1 && images.some((image) => image.url);
   const current = images[wrap(index, images.length)] ?? images[0];
   const rtl = locale === "ar";
