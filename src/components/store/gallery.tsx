@@ -43,7 +43,7 @@ export function Gallery({ product }: { product: CatalogProduct }) {
   }
 
   return (
-    <div className={`grid min-w-0 gap-3 ${many ? "md:grid-cols-[4.5rem_minmax(0,1fr)] md:items-start" : ""}`}>
+    <div className={`grid w-full min-w-0 items-start gap-3 self-start ${many ? "md:grid-cols-[4.5rem_minmax(0,1fr)]" : ""}`}>
       {many ? (
         <div className="order-2 flex max-w-full gap-2 overflow-x-auto md:order-1 md:max-h-[40rem] md:flex-col md:overflow-y-auto" aria-label={dict.a11y.gallery}>
           {images.map((image, imageIndex) => (
@@ -61,7 +61,7 @@ export function Gallery({ product }: { product: CatalogProduct }) {
         </div>
       ) : null}
       <div
-        className="relative order-1 aspect-[4/5] bg-mist md:order-2"
+        className="relative order-1 aspect-[4/5] w-full min-w-0 max-w-full overflow-hidden bg-mist md:order-2"
         onTouchStart={(event) => {
           if (event.touches.length === 1) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
         }}

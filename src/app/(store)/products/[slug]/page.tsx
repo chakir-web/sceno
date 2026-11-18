@@ -23,7 +23,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <article>
       <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>
-      <div className="mt-6 grid gap-10 lg:grid-cols-2">
+      <div className="mt-6 grid items-start gap-10 lg:grid-cols-2">
         <Gallery product={product.data} />
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-champagne">{product.data.categoryName}</p>
