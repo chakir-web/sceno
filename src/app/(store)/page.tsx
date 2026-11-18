@@ -46,19 +46,21 @@ export default async function HomePage() {
 
   return (
     <div className="grid gap-16 md:gap-20">
-      <section className="grid items-center gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-12">
-        <div className="min-w-0">
-          <p className="max-w-full text-[11px] uppercase leading-5 tracking-[0.14em] text-champagne sm:tracking-[0.24em]">{dict.home.eyebrow}</p>
-          <h1 className="mt-4 max-w-xl font-display text-[2.35rem] leading-[1.02] sm:text-5xl md:text-6xl lg:text-7xl">{dict.home.title}</h1>
-          <p className="mt-6 max-w-lg text-base leading-7 text-stone">{dict.home.lead}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link className="btn btn-primary w-full sm:w-auto" href="/products">{dict.home.shopCta}</Link>
-            <Link className="btn btn-ghost w-full sm:w-auto" href="#nouveautes">{dict.home.newCta}</Link>
+      <section className="-mt-8 w-screen max-w-[100vw] mx-[calc(50%-50vw)] md:-mt-12">
+        <div className="grid lg:min-h-[40rem] lg:grid-cols-2">
+          <div className="relative order-1 min-h-[22rem] bg-mist sm:min-h-[28rem] lg:order-2 lg:min-h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/home/hero.webp" alt={dict.home.heroAlt} className="absolute inset-0 h-full w-full object-cover object-[center_40%]" />
           </div>
-        </div>
-        <div className="relative aspect-[4/3] overflow-hidden bg-mist sm:aspect-[16/10] lg:aspect-auto lg:min-h-[34rem]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/home/hero.webp" alt={dict.home.heroAlt} className="absolute inset-0 h-full w-full object-cover object-[32%_center]" />
+          <div className="order-2 flex flex-col justify-center bg-ink px-6 py-12 text-ivory sm:px-10 lg:order-1 lg:px-14 lg:py-16">
+            <p className="text-[11px] uppercase leading-5 tracking-[0.16em] text-champagne sm:tracking-[0.22em]">{dict.home.eyebrow}</p>
+            <h1 className="mt-4 max-w-xl font-display text-[2.6rem] leading-[1.02] text-ivory sm:text-6xl lg:text-7xl">{dict.home.title}</h1>
+            <p className="mt-6 max-w-md text-base leading-7 text-beige">{dict.home.lead}</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link className="btn btn-light w-full sm:w-auto" href="/products">{dict.home.shopCta}</Link>
+              <Link className="btn w-full border border-ivory/35 text-ivory hover:border-champagne sm:w-auto" href="#nouveautes">{dict.home.newCta}</Link>
+            </div>
+          </div>
         </div>
       </section>
 

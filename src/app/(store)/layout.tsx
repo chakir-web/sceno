@@ -11,7 +11,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const { locale, dict } = await getI18n();
   const [categories, settings] = await Promise.all([listCategories(locale), getSettings()]);
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-clip">
       <p className="bg-ink px-4 py-2 text-center text-[11px] uppercase tracking-[0.22em] text-ivory">{dict.home.banner}</p>
       <Header locale={locale} dict={dict} categories={categories.data} />
       <Suspense fallback={null}><MetaPixel /></Suspense>

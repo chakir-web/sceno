@@ -11,12 +11,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CheckoutPage() {
   const { dict } = await getI18n();
   const rates = await listRates(false);
+  const cities = rates.data.map((rate) => ({ city: rate.city, feeMad: rate.feeMad }));
+  const casablanca = cities.find((item) => item.city.trim().toLocaleLowerCase("fr") === "casablanca");
   return (
     <div>
       <h1 className="font-display text-5xl">{dict.checkout.title}</h1>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-stone">{dict.checkout.lead}</p>
       <div className="mt-8">
-        <CheckoutForm cities={rates.data.map((rate) => ({ city: rate.city, feeMad: rate.feeMad }))} defaultCity={rates.data[0]?.city ?? ""} />
+        <CheckoutForm cities={cities} defaultCity={casablanca?.city ?? cities[0]?.city ?? ""} />
       </div>
     </div>
   );
