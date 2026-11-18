@@ -28,9 +28,9 @@ export function CartView() {
               <p className="text-sm text-stone">{item.variantLabel}</p>
               <div className="mt-auto flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <button className="btn btn-ghost px-3" type="button" onClick={() => update(item.variantId, item.quantity - 1)}>−</button>
+                  <button className="btn btn-ghost px-3" type="button" aria-label={dict.a11y.decreaseQty} onClick={() => update(item.variantId, item.quantity - 1)}>−</button>
                   <span>{item.quantity}</span>
-                  <button className="btn btn-ghost px-3" type="button" onClick={() => update(item.variantId, item.quantity + 1)}>+</button>
+                  <button className="btn btn-ghost px-3" type="button" aria-label={dict.a11y.increaseQty} onClick={() => update(item.variantId, item.quantity + 1)}>+</button>
                 </div>
                 <div className="text-end">
                   <p>{formatMoney(item.unitPrice * item.quantity, locale)}</p>

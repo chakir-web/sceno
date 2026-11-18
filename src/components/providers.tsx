@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { direction, type Locale } from "@/lib/i18n/locales";
 
-type CartLine = {
+export type CartLine = {
   productId: string;
   variantId: string;
   quantity: number;
@@ -15,14 +15,29 @@ type CartLine = {
   variantLabel: string;
 };
 
+export type CartNotice = {
+  key: number;
+  name: string;
+  image: string | null;
+  quantity: number;
+  unitPrice: number;
+  variantLabel: string;
+};
+
 const LocaleContext = createContext<{ locale: Locale; dict: ReturnType<typeof getDictionary> } | null>(null);
 const CartContext = createContext<{
   items: CartLine[];
   count: number;
+  notice: CartNotice | null;
+  bump: number;
+  drawer: boolean;
   add: (line: CartLine) => void;
   update: (variantId: string, quantity: number) => void;
   remove: (variantId: string) => void;
   clear: () => void;
+  openDrawer: () => void;
+  closeDrawer: () => void;
+  dismissNotice: () => void;
 } | null>(null);
 
 const CART_KEY = "sceno_cart";
@@ -43,6 +58,9 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
   const dict = useMemo(() => getDictionary(locale), [locale]);
   const [items, setItems] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState<CartNotice | null>(null);
+  const [bump, setBump] = useState(0);
+  const [drawer, setDrawer] = useState(false);
 
   useEffect(() => {
     document.documentElement.lang = locale === "ar" ? "ar" : "fr";
@@ -66,15 +84,31 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
     if (ready) window.localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items, ready]);
 
+  const openDrawer = useCallback(() => setDrawer(true), []);
+  const closeDrawer = useCallback(() => setDrawer(false), []);
+  const dismissNotice = useCallback(() => setNotice(null), []);
+
   const cart = useMemo(() => ({
     items,
     count: items.reduce((sum, item) => sum + item.quantity, 0),
+    notice,
+    bump,
+    drawer,
     add(line: CartLine) {
       setItems((current) => {
         const index = current.findIndex((item) => item.variantId === line.variantId);
         if (index < 0) return [...current, line];
         return current.map((item) => item.variantId === line.variantId ? { ...item, quantity: Math.min(20, item.quantity + line.quantity) } : item);
       });
+      setNotice({
+        key: Date.now(),
+        name: line.name,
+        image: line.image,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        variantLabel: line.variantLabel,
+      });
+      setBump((value) => value + 1);
     },
     update(variantId: string, quantity: number) {
       setItems((current) => current.flatMap((item) => item.variantId !== variantId ? [item] : quantity < 1 ? [] : [{ ...item, quantity: Math.min(20, quantity) }]));
@@ -84,8 +118,12 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
     },
     clear() {
       setItems([]);
+      setNotice(null);
     },
-  }), [items]);
+    openDrawer,
+    closeDrawer,
+    dismissNotice,
+  }), [items, notice, bump, drawer, openDrawer, closeDrawer, dismissNotice]);
 
   return (
     <LocaleContext.Provider value={{ locale, dict }}>

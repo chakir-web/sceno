@@ -19,7 +19,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <p className="mt-3 max-w-2xl text-sm leading-6 text-stone">{category?.description}</p>
       {products.data.items.length ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {products.data.items.map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} choose={dict.catalog.choose} />)}
+          {products.data.items.map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} />)}
         </div>
       ) : <div className="mt-8"><EmptyState title={dict.catalog.empty} /></div>}
     </div>

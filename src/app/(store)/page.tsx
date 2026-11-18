@@ -117,7 +117,7 @@ function ProductSection({ id, title, products, locale, dict }: { id?: string; ti
       </div>
       {products.length ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} choose={dict.catalog.choose} />)}
+          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} />)}
         </div>
       ) : <p className="text-sm text-stone">{dict.home.emptyProducts}</p>}
     </section>

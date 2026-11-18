@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Media } from "@/components/store/media";
+import { QuickAdd } from "@/components/store/purchase";
 import type { Locale } from "@/lib/i18n/locales";
 import { displayPrice } from "@/lib/services/catalog";
 import { formatMoney } from "@/lib/utils";
 import type { CatalogProduct } from "@/types/commerce";
 
-export function ProductCard({ product, locale, promoLabel, soldOut, choose }: { product: CatalogProduct; locale: Locale; promoLabel: string; soldOut: string; choose?: string }) {
+export function ProductCard({ product, locale, promoLabel, soldOut }: { product: CatalogProduct; locale: Locale; promoLabel: string; soldOut: string }) {
   const price = displayPrice(product);
   return (
+    <article>
     <Link href={`/products/${product.slug}`} className="group block">
       <div className="relative aspect-[4/5] overflow-hidden bg-mist">
         <Media src={product.images[0]?.url ?? null} alt={product.name} className="transition duration-500 group-hover:scale-[1.03]" />
@@ -21,8 +23,9 @@ export function ProductCard({ product, locale, promoLabel, soldOut, choose }: { 
           <p className="text-sm">{formatMoney(price.amount, locale)}</p>
           {price.compare ? <p className="text-xs text-stone line-through">{formatMoney(price.compare, locale)}</p> : null}
         </div>
-        {choose ? <p className="mt-3 text-[11px] uppercase tracking-[0.16em] text-champagne">{choose}</p> : null}
       </div>
     </Link>
+    <QuickAdd product={product} />
+    </article>
   );
 }

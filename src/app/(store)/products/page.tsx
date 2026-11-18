@@ -44,7 +44,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       <p className="mt-6 text-sm text-stone">{products.data.total} {dict.catalog.results}</p>
       {products.data.items.length ? (
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {products.data.items.map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} choose={dict.catalog.choose} />)}
+          {products.data.items.map((product) => <ProductCard key={product.id} product={product} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} />)}
         </div>
       ) : <div className="mt-6"><EmptyState title={dict.catalog.empty} /></div>}
       <Pagination page={page} total={products.data.total} pageSize={products.data.pageSize} pathname="/products" params={params} />

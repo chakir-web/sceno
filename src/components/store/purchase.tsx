@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
 import { Media } from "@/components/store/media";
 import { unitPrice } from "@/lib/pricing";
@@ -44,6 +44,11 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const timer = window.setTimeout(() => setAdded(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [added]);
   const variant = variants.find((item) => item.id === variantId) ?? variants[0];
   const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : unitPrice(product.priceMad, product.promoPriceMad, null);
   const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
@@ -88,7 +93,7 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
       </div>
       <button
         type="button"
-        className="btn btn-primary"
+        className={`btn ${added ? "btn-added" : "btn-primary"}`}
         disabled={variant.stockQuantity < 1}
         onClick={() => {
           add({
@@ -104,9 +109,49 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
           setAdded(true);
         }}
       >
-        {added ? dict.product.added : dict.product.add}
+        {added ? dict.product.addedMark : dict.product.add}
       </button>
       <p className="text-xs text-stone">{dict.product.sku}: {variant.sku}</p>
+    </div>
+  );
+}
+
+export function QuickAdd({ product }: { product: CatalogProduct }) {
+  const { dict } = useI18n();
+  const { add } = useCart();
+  const [added, setAdded] = useState(false);
+  const variant = product.variants.find((item) => item.isActive && item.stockQuantity > 0);
+  useEffect(() => {
+    if (!added) return;
+    const timer = window.setTimeout(() => setAdded(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [added]);
+  if (!variant) return null;
+  const price = unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad);
+  const variantLabel = [variant.size, variant.color].filter(Boolean).join(" / ");
+  const several = product.variants.filter((item) => item.isActive && item.stockQuantity > 0).length > 1;
+  return (
+    <div className="mt-3">
+      {several && variantLabel ? <p className="mb-2 text-[11px] text-stone">{variantLabel}</p> : null}
+      <button
+        type="button"
+        className={`btn w-full px-2 text-center text-xs leading-4 ${added ? "btn-added" : "btn-primary"}`}
+        onClick={() => {
+          add({
+            productId: product.id,
+            variantId: variant.id,
+            quantity: 1,
+            name: product.name,
+            slug: product.slug,
+            image: product.images[0]?.url ?? null,
+            unitPrice: price,
+            variantLabel,
+          });
+          setAdded(true);
+        }}
+      >
+        {added ? dict.product.addedMark : dict.product.add}
+      </button>
     </div>
   );
 }
