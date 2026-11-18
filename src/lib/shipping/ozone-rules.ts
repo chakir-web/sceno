@@ -137,6 +137,30 @@ export function officialDeliveryNotePdfUrl(ref: string) {
   return `https://client.ozoneexpress.ma/pdf-delivery-note?dn-ref=${encodeURIComponent(value)}`;
 }
 
+const preparationShipments = new Set(["pending", "prepared"]);
+
+/** Décision unique avant add-parcel. Le verrou SQL reste l'autorité en base. */
+export function ozoneDispatchBlock(input: {
+  role: string;
+  confirmation: string;
+  shipment: string;
+  trackingNumber?: string | null;
+  parcelId?: string | null;
+  dispatchStartedAt?: string | null;
+  now?: number;
+}) {
+  if (input.role !== "admin") return "forbidden" as const;
+  if (input.confirmation !== "confirmed") return "not_confirmed" as const;
+  if (!preparationShipments.has(input.shipment)) return "already_shipped" as const;
+  if ((input.trackingNumber ?? "").trim() || (input.parcelId ?? "").trim()) return "ozone_exists" as const;
+  if (input.dispatchStartedAt) {
+    const started = new Date(input.dispatchStartedAt).getTime();
+    const age = (input.now ?? Date.now()) - started;
+    if (Number.isFinite(started) && age >= 0 && age < 2 * 60 * 1000) return "ozone_busy" as const;
+  }
+  return null;
+}
+
 export function creationRefusal(input: {
   confirmed: boolean;
   trackingNumber?: string | null;

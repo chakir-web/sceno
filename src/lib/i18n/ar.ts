@@ -332,6 +332,7 @@ export const ar: Dictionary = {
     not_confirmed: "الطلب غير مؤكد.",
     ozone_exists: "لهذا الطلب طرد Ozone Express مسبقاً.",
     ozone_busy: "إنشاء طرد Ozone جارٍ لهذا الطلب.",
+    already_shipped: "هذا الطلب لم يعد في مرحلة التحضير.",
     city_unknown: "المدينة غير معروفة لدى Ozone Express",
   },
   toast: {

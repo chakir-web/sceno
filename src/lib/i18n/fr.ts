@@ -332,6 +332,7 @@ export const fr = {
     not_confirmed: "La commande n'est pas confirmée.",
     ozone_exists: "Cette commande a déjà un colis Ozone Express.",
     ozone_busy: "Une création Ozone est déjà en cours pour cette commande.",
+    already_shipped: "Cette commande n'est plus en préparation.",
     city_unknown: "Ville non reconnue par Ozone Express",
   },
   toast: {

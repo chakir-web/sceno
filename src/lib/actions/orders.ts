@@ -8,7 +8,7 @@ import { asArray } from "@/lib/http";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { canTransitionShipment, shipmentStatuses, type ConfirmationStatus, type ShipmentStatus } from "@/lib/orders/transitions";
 import { createParcel, findOzoneCityById, getCities, getParcelInfo, mapOzoneStatusToScenoStatus, matchOzoneCity, ozoneConfigured, trackParcel } from "@/lib/shipping/ozone";
-import { creationRefusal } from "@/lib/shipping/ozone-rules";
+import { creationRefusal, ozoneDispatchBlock } from "@/lib/shipping/ozone-rules";
 import { csvRecords } from "@/lib/csv";
 import { listCarriers } from "@/lib/services/settings";
 
@@ -207,6 +207,8 @@ const ozoneRefusal: Record<string, string> = {
   not_confirmed: "La commande n'est pas confirmée.",
   ozone_exists: "Cette commande a déjà un colis Ozone Express.",
   ozone_busy: "Une création Ozone est déjà en cours pour cette commande.",
+  already_shipped: "Cette commande n'est plus en préparation.",
+  forbidden: "Action non autorisée.",
   invalid_name: "Le nom du destinataire est incomplet.",
   invalid_phone: "Le numéro de téléphone marocain est invalide.",
   invalid_address: "L'adresse est incomplète.",
@@ -214,7 +216,6 @@ const ozoneRefusal: Record<string, string> = {
   city_unknown: "Ville non reconnue par Ozone Express",
   not_configured: "Identifiants Ozone absents du serveur.",
   not_found: "Introuvable.",
-  forbidden: "Action non autorisée.",
   generic: "L'opération a échoué.",
 };
 
@@ -228,7 +229,16 @@ export async function sendToOzoneAction(_previous: OzoneSendState | null, formDa
     .eq("id", orderId)
     .maybeSingle();
   if (!order) return { ok: false, message: ozoneRefusal.not_found };
-  const { data: shipment } = await supabase.from("shipments").select("tracking_number, ozone_parcel_id").eq("order_id", orderId).maybeSingle();
+  const { data: shipment } = await supabase.from("shipments").select("tracking_number, ozone_parcel_id, ozone_dispatch_started_at").eq("order_id", orderId).maybeSingle();
+  const blocked = ozoneDispatchBlock({
+    role: "admin",
+    confirmation: String(order.confirmation_status),
+    shipment: String(order.shipment_status),
+    trackingNumber: shipment?.tracking_number,
+    parcelId: shipment?.ozone_parcel_id,
+    dispatchStartedAt: shipment?.ozone_dispatch_started_at,
+  });
+  if (blocked) return { ok: false, message: ozoneRefusal[blocked] ?? ozoneRefusal.generic };
   const phone = normalizeMoroccanPhone(String(order.phone_normalized ?? ""));
   const price = Number(order.total_mad);
   const early = creationRefusal({

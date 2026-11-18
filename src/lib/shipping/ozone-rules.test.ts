@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canTransitionShipment } from "@/lib/orders/transitions";
 import {
   creationRefusal,
+  ozoneDispatchBlock,
   deliveryNoteRef,
   interpretOzoneBody,
   mapOzoneStatusToScenoStatus,
@@ -31,6 +32,22 @@ const ready = {
 describe("création Ozone", () => {
   it("refuse une commande non confirmée", () => {
     expect(creationRefusal({ ...ready, confirmed: false })).toBe("not_confirmed");
+  });
+
+  it("n'autorise Ozone qu'après confirmation, et seulement pour l'admin", () => {
+    const open = { role: "admin", confirmation: "confirmed", shipment: "pending", trackingNumber: "", parcelId: "" };
+    expect(ozoneDispatchBlock({ ...open, confirmation: "new" })).toBe("not_confirmed");
+    expect(ozoneDispatchBlock({ ...open, confirmation: "confirming" })).toBe("not_confirmed");
+    expect(ozoneDispatchBlock({ ...open, confirmation: "cancelled" })).toBe("not_confirmed");
+    expect(ozoneDispatchBlock({ ...open, confirmation: "unreachable" })).toBe("not_confirmed");
+    expect(ozoneDispatchBlock({ ...open, role: "confirmer" })).toBe("forbidden");
+    expect(ozoneDispatchBlock(open)).toBeNull();
+    expect(ozoneDispatchBlock({ ...open, shipment: "shipped" })).toBe("already_shipped");
+    expect(ozoneDispatchBlock({ ...open, shipment: "refused" })).toBe("already_shipped");
+    expect(ozoneDispatchBlock({ ...open, trackingNumber: "OZE123" })).toBe("ozone_exists");
+    const started = new Date().toISOString();
+    expect(ozoneDispatchBlock({ ...open, dispatchStartedAt: started, now: Date.now() })).toBe("ozone_busy");
+    expect(ozoneDispatchBlock({ ...open, trackingNumber: "OZE123", dispatchStartedAt: started })).toBe("ozone_exists");
   });
 
   it("refuse une ville Ozone absente", () => {

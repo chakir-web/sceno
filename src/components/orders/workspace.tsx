@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/office/indicators";
 import { OzoneSend } from "@/components/orders/ozone-send";
 import { addNoteForm, assignOrderForm, transitionOrderAction, updateDeliveryForm, saveShipmentForm, syncOzoneForm } from "@/lib/actions/orders";
 import { getCities, matchOzoneCity, ozoneConfigured } from "@/lib/shipping/ozone";
+import { ozoneDispatchBlock } from "@/lib/shipping/ozone-rules";
 import { getI18n } from "@/lib/i18n/server";
 import { statusLabel } from "@/lib/i18n";
 import { phoneHref } from "@/lib/phone";
@@ -25,9 +26,16 @@ export async function OrderWorkspace({
 }) {
   const { locale, dict } = await getI18n();
   const name = locale === "ar" ? "nameAr" : "nameFr";
-  const dispatchAge = order.ozoneDispatchStartedAt ? Date.now() - new Date(order.ozoneDispatchStartedAt).getTime() : Number.POSITIVE_INFINITY;
-  const ozoneBusy = !order.trackingNumber && !order.ozoneParcelId && dispatchAge < 2 * 60 * 1000;
-  const canSendOzone = mode === "admin" && order.confirmationStatus === "confirmed" && !order.trackingNumber && !order.ozoneParcelId && !ozoneBusy;
+  const dispatchBlock = ozoneDispatchBlock({
+    role: mode,
+    confirmation: order.confirmationStatus,
+    shipment: order.shipmentStatus,
+    trackingNumber: order.trackingNumber,
+    parcelId: order.ozoneParcelId,
+    dispatchStartedAt: order.ozoneDispatchStartedAt,
+  });
+  const ozoneBusy = dispatchBlock === "ozone_busy";
+  const canSendOzone = dispatchBlock === null;
   let ozoneCities: { id: string; name: string }[] = [];
   let ozoneCityId = "";
   let ozoneCityUnknown = false;
