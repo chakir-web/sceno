@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
 import { imagesForColor } from "@/lib/catalog/images";
+import { trackMeta } from "@/lib/meta/pixel";
 import { unitPrice } from "@/lib/pricing";
 import { useProductColor } from "@/components/store/product-color";
 import { formatMoney } from "@/lib/utils";
@@ -83,6 +84,14 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
             unitPrice: price,
             variantLabel: [variant.size, variant.color].filter(Boolean).join(" / "),
           });
+          trackMeta("AddToCart", {
+            content_ids: [product.id],
+            content_type: "product",
+            content_name: product.name,
+            value: price * Math.min(quantity, variant.stockQuantity),
+            currency: "MAD",
+            contents: [{ id: product.id, quantity: Math.min(quantity, variant.stockQuantity), item_price: price }],
+          });
           setAdded(true);
         }}
       >
@@ -123,6 +132,14 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             image: imagesForColor(product.images, variant.color)[0]?.url ?? null,
             unitPrice: price,
             variantLabel,
+          });
+          trackMeta("AddToCart", {
+            content_ids: [product.id],
+            content_type: "product",
+            content_name: product.name,
+            value: price,
+            currency: "MAD",
+            contents: [{ id: product.id, quantity: 1, item_price: price }],
           });
           setAdded(true);
         }}

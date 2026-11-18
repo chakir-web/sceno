@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductView } from "@/components/store/meta-events";
 import { ProductColorProvider } from "@/components/store/product-color";
 import { AddToCart, Gallery } from "@/components/store/purchase";
 import { ProductCard } from "@/components/store/product-card";
@@ -25,6 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     <article>
       <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>
       <ProductColorProvider product={product.data}>
+      <ProductView product={product.data} />
       <div className="mt-6 grid items-start gap-10 lg:grid-cols-2">
         <Gallery product={product.data} />
         <div>

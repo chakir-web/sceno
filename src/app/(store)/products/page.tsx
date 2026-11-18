@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SearchView } from "@/components/store/meta-events";
 import { ProductCard } from "@/components/store/product-card";
 import { EmptyState, Pagination } from "@/components/ui/primitives";
 import { SetupPanel } from "@/components/store/setup-panel";
@@ -23,6 +24,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     <div>
       <p className="text-[11px] uppercase tracking-[0.2em] text-champagne">{dict.catalog.lead}</p>
       <h1 className="mt-2 font-display text-5xl">{dict.catalog.title}</h1>
+      <SearchView query={params.q} />
       <form className="mt-8 grid gap-3 md:grid-cols-4">
         <input className="field" name="q" defaultValue={params.q} placeholder={dict.catalog.search} />
         <select className="field" name="category" defaultValue={params.category ?? ""}>

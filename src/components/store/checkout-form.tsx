@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCart, useI18n } from "@/components/providers";
+import { trackMeta } from "@/lib/meta/pixel";
 import type { Quote } from "@/lib/services/checkout";
 import { formatMoney } from "@/lib/utils";
 
@@ -29,9 +30,22 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { fullName: "", phone: "", address: "", notes: "" } });
   const resolvedCity = city === "__other" ? other : city;
 
+  const checkoutTracked = useRef(false);
   useEffect(() => {
     if (!idempotency.current) idempotency.current = crypto.randomUUID();
   }, []);
+  useEffect(() => {
+    if (checkoutTracked.current || !items.length) return;
+    checkoutTracked.current = true;
+    trackMeta("InitiateCheckout", {
+      content_ids: items.map((item) => item.productId),
+      content_type: "product",
+      contents: items.map((item) => ({ id: item.productId, quantity: item.quantity, item_price: item.unitPrice })),
+      num_items: items.reduce((sum, item) => sum + item.quantity, 0),
+      value: items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+      currency: "MAD",
+    });
+  }, [items]);
 
   useEffect(() => {
     if (!items.length || resolvedCity.trim().length < 2) return;
@@ -89,8 +103,17 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           setError(dict.errors[body.code as keyof typeof dict.errors] ?? dict.errors.generic);
           return;
         }
+        const order = body.order as { order_number: string; total_mad: number };
+        trackMeta("Purchase", {
+          content_ids: items.map((item) => item.productId),
+          content_type: "product",
+          contents: items.map((item) => ({ id: item.productId, quantity: item.quantity, item_price: item.unitPrice })),
+          num_items: items.reduce((sum, item) => sum + item.quantity, 0),
+          value: Number(order.total_mad ?? quote?.totalMad ?? 0),
+          currency: "MAD",
+        }, order.order_number);
         clear();
-        router.push(`/order-success?number=${encodeURIComponent(body.order.order_number)}`);
+        router.push(`/order-success?number=${encodeURIComponent(order.order_number)}`);
       })}
     >
       <div className="grid gap-4">
