@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Logo } from "@/components/brand/logo";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { useCart } from "@/components/providers";
@@ -34,18 +35,33 @@ export function CartButton({ label }: { label: string }) {
 
 export function MobileNav({ dict, categories }: { locale: Locale; dict: Dictionary; categories: CatalogCategory[] }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { openDrawer } = useCart();
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
   return (
     <>
-      <button className="grid h-10 w-10 place-items-center border border-line md:hidden" aria-label={dict.a11y.openMenu} onClick={() => setOpen(true)}>
+      <button type="button" className="grid h-10 w-10 place-items-center border border-line bg-ivory md:hidden" aria-label={dict.a11y.openMenu} aria-expanded={open} onClick={() => setOpen(true)}>
         <Menu size={18} />
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-50 bg-ink/30 md:hidden" onClick={() => setOpen(false)}>
-          <div className="h-full w-[min(100%,360px)] bg-ivory p-6" onClick={(event) => event.stopPropagation()}>
+      {open && mounted ? createPortal(
+        <div className="fixed inset-0 z-50 bg-ivory md:hidden" onClick={() => setOpen(false)}>
+          <div className="flex h-full w-full flex-col overflow-y-auto bg-ivory p-6" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between">
               <Logo className="h-8 w-auto" />
-              <button aria-label={dict.a11y.closeMenu} onClick={() => setOpen(false)}><X /></button>
+              <button type="button" className="grid h-10 w-10 place-items-center border border-line bg-ivory" aria-label={dict.a11y.closeMenu} onClick={() => setOpen(false)}><X /></button>
             </div>
             <form action="/products" className="mt-8">
               <input name="q" className="field" placeholder={dict.nav.searchPlaceholder} aria-label={dict.a11y.search} />
@@ -60,7 +76,8 @@ export function MobileNav({ dict, categories }: { locale: Locale; dict: Dictiona
               ))}
             </nav>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );

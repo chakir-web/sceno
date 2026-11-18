@@ -30,6 +30,7 @@ export const fr = {
     zoomOut: "Zoom arrière",
     main: "Contenu principal",
     closeCart: "Fermer le panier",
+    cityList: "Liste des villes",
   },
   nav: {
     home: "Accueil",
@@ -152,6 +153,8 @@ export const fr = {
     phoneHint: "Exemple : 0612345678",
     city: "Ville",
     cityOther: "Autre ville",
+    citySearch: "Rechercher une ville",
+    cityEmpty: "Aucune ville ne correspond.",
     address: "Adresse complète",
     notes: "Remarques",
     notesHint: "Étage, repère, disponibilité.",

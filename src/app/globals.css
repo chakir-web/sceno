@@ -131,6 +131,9 @@ html[dir="rtl"] .font-display {
 }
 
 .toast-in { animation: toast-in 220ms ease; }
+.city-list { animation: select-drop 160ms ease; }
+.city-list::-webkit-scrollbar { width: 8px; }
+.city-list::-webkit-scrollbar-thumb { background: var(--beige); }
 .gallery-fade { animation: gallery-fade 180ms ease; }
 .drawer-panel { animation: drawer-in 220ms ease; }
 
@@ -142,6 +145,11 @@ html[dir="rtl"] .font-display {
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes select-drop {
+  from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -168,6 +176,7 @@ html[dir="rtl"] .drawer-panel { animation-name: drawer-in-rtl; }
   html .cart-badge-pop,
   html .toast-in,
   html .gallery-fade,
+  html .city-list,
   html .drawer-panel,
   html[dir="rtl"] .drawer-panel,
   html .btn-added { animation: none; }

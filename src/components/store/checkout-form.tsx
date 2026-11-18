@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCart, useI18n } from "@/components/providers";
+import { CitySelect } from "@/components/store/city-select";
 import { trackMeta } from "@/lib/meta/pixel";
 import type { Quote } from "@/lib/services/checkout";
 import { formatMoney } from "@/lib/utils";
@@ -119,12 +120,10 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
       <div className="grid gap-4">
         <label className="grid gap-2 text-sm">{dict.checkout.fullName}<input className="field" {...form.register("fullName")} /></label>
         <label className="grid gap-2 text-sm">{dict.checkout.phone}<input className="field" inputMode="tel" placeholder={dict.checkout.phoneHint} {...form.register("phone")} /></label>
-        <label className="grid gap-2 text-sm">{dict.checkout.city}
-          <select className="field" value={city} onChange={(event) => setCity(event.target.value)}>
-            {cities.map((item) => <option key={item.city} value={item.city}>{item.city}</option>)}
-            <option value="__other">{dict.checkout.cityOther}</option>
-          </select>
-        </label>
+        <div className="grid gap-2 text-sm">
+          <label htmlFor="checkout-city">{dict.checkout.city}</label>
+          <CitySelect id="checkout-city" cities={cities} value={city} onChange={setCity} />
+        </div>
         {city === "__other" ? <input className="field" value={other} onChange={(event) => setOther(event.target.value)} placeholder={dict.checkout.city} /> : null}
         <label className="grid gap-2 text-sm">{dict.checkout.address}<textarea className="field min-h-28" {...form.register("address")} /></label>
         <label className="grid gap-2 text-sm">{dict.checkout.notes}<textarea className="field min-h-20" placeholder={dict.checkout.notesHint} {...form.register("notes")} /></label>

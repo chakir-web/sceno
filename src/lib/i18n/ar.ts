@@ -31,6 +31,7 @@ export const ar: Dictionary = {
     zoomOut: "تصغير",
     main: "المحتوى الرئيسي",
     closeCart: "إغلاق السلة",
+    cityList: "قائمة المدن",
   },
   nav: {
     home: "الرئيسية",
@@ -152,6 +153,8 @@ export const ar: Dictionary = {
     phoneHint: "مثال: 0612345678",
     city: "المدينة",
     cityOther: "مدينة أخرى",
+    citySearch: "ابحث عن مدينة",
+    cityEmpty: "لا توجد مدينة مطابقة.",
     address: "العنوان الكامل",
     notes: "ملاحظات",
     notesHint: "الطابق، المعلم، أوقات التواجد.",
