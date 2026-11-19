@@ -31,6 +31,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { locale, dict } = await getI18n();
   return (
     <html lang={locale === "ar" ? "ar" : "fr"} dir={direction(locale)} className={`${sans.variable} ${display.variable} ${arabic.variable}`}>
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=GTM-5T5FMSDM" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'GTM-5T5FMSDM');",
+          }}
+        />
+      </head>
       <body>
         <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:bg-ivory focus:px-3 focus:py-2">{dict.a11y.skip}</a>
         <Providers locale={locale}>{children}</Providers>
