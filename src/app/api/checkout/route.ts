@@ -7,6 +7,13 @@ import { tiktokCommerce } from "@/lib/tiktok/commerce";
 import { sendTikTokEvent } from "@/lib/tiktok/events";
 import { checkoutSchema } from "@/lib/validations/commerce";
 
+function sameOriginPage(request: Request) {
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer") ?? "";
+  if (origin && referer.startsWith(`${origin}/`)) return referer.slice(0, 500);
+  return origin ? `${origin}/checkout` : undefined;
+}
+
 export async function POST(request: Request) {
   if (!assertSameOrigin(request)) return NextResponse.json({ ok: false, code: "forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
@@ -26,7 +33,6 @@ export async function POST(request: Request) {
     Number(result.order.total_mad),
   );
   if (commerce) {
-    const origin = request.headers.get("origin");
     const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
     const ip = /^[0-9a-fA-F:.]+$/.test(forwarded) ? forwarded : undefined;
     const ttp = (request.headers.get("cookie") ?? "").split(";").map((part) => part.trim()).find((part) => part.startsWith("_ttp="))?.slice(5);
@@ -34,7 +40,7 @@ export async function POST(request: Request) {
       ...commerce,
       event: "Purchase",
       eventId: result.order.order_number,
-      pageUrl: origin ? `${origin}/checkout` : undefined,
+      pageUrl: sameOriginPage(request),
       phone,
       ip,
       userAgent: request.headers.get("user-agent") ?? undefined,
