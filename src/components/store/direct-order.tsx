@@ -268,13 +268,16 @@ export function DirectOrder({
       {colors.some((item) => item.color) ? (
         <div>
           <p className="text-sm">{dict.product.color}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {colors.map((item) => (
-              <button key={item.id} type="button" className={`border px-3 py-2 text-sm ${item.id === variant.id ? "border-ink" : "border-line"}`} onClick={() => setVariantId(item.id)}>
-                <span className="me-2 inline-block h-3 w-3" style={{ background: item.colorHex || "#C6B69B" }} />
-                {item.color}
-              </button>
-            ))}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {colors.map((item) => {
+              const selected = item.id === variant.id;
+              return (
+                <button key={item.id} type="button" aria-pressed={selected} className={`inline-flex h-11 w-full items-center justify-center gap-2 border px-3 text-sm ${selected ? "border-ink" : "border-line"}`} onClick={() => setVariantId(item.id)}>
+                  <span className="h-3 w-3 shrink-0" style={{ background: item.colorHex || "#C6B69B" }} />
+                  {item.color}
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}

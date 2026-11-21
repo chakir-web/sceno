@@ -113,6 +113,16 @@ function Viewer({
   const rtl = locale === "ar";
   const closeRef = useRef<HTMLButtonElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const onIndexRef = useRef(onIndex);
+  const indexRef = useRef(index);
+  const imagesRef = useRef(images);
+  const rtlRef = useRef(rtl);
+  onCloseRef.current = onClose;
+  onIndexRef.current = onIndex;
+  indexRef.current = index;
+  imagesRef.current = images;
+  rtlRef.current = rtl;
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
@@ -130,25 +140,46 @@ function Viewer({
 
   useEffect(() => {
     closeRef.current?.focus();
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      const delta = event.key === "ArrowRight" ? (rtl ? -1 : 1) : event.key === "ArrowLeft" ? (rtl ? 1 : -1) : 0;
+      if (event.key === "Escape") onCloseRef.current();
+      const direction = rtlRef.current;
+      const delta = event.key === "ArrowRight" ? (direction ? -1 : 1) : event.key === "ArrowLeft" ? (direction ? 1 : -1) : 0;
       if (delta) {
         setScale(1);
         setOffset({ x: 0, y: 0 });
-        onIndex(wrap(index + delta, images.length));
+        onIndexRef.current(wrap(indexRef.current + delta, imagesRef.current.length));
       }
       if (event.key === "+" || event.key === "=") setScale((value) => clampScale(value + 0.25));
       if (event.key === "-" || event.key === "_") setScale((value) => clampScale(value - 0.25));
     };
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = previous;
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.right = previous.right;
+      body.style.width = previous.width;
+      body.style.overflow = previous.overflow;
       document.removeEventListener("keydown", onKey);
+      window.scrollTo(0, scrollY);
     };
-  }, [images.length, index, onClose, onIndex, rtl]);
+  }, []);
 
   useEffect(() => {
     const node = stageRef.current;
@@ -167,23 +198,23 @@ function Viewer({
 
   if (!current || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[70] bg-ink/92" role="dialog" aria-modal="true" aria-label={current.alt}>
+    <div className="fixed inset-0 z-[70] overflow-hidden bg-ink" role="dialog" aria-modal="true" aria-label={current.alt} onClick={onClose}>
       <button ref={closeRef} type="button" className="absolute end-3 top-3 z-10 grid h-11 w-11 place-items-center text-ivory" aria-label={dict.a11y.closeViewer} onClick={onClose}>
         <X />
       </button>
       {many ? (
-        <button type="button" className="absolute start-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center text-ivory" aria-label={dict.a11y.previousImage} onClick={() => step(-1)}>
+        <button type="button" className="absolute start-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center bg-ink/40 text-ivory" aria-label={dict.a11y.previousImage} onClick={(event) => { event.stopPropagation(); step(-1); }}>
           {rtl ? <ChevronRight /> : <ChevronLeft />}
         </button>
       ) : null}
       {many ? (
-        <button type="button" className="absolute end-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center text-ivory" aria-label={dict.a11y.nextImage} onClick={() => step(1)}>
+        <button type="button" className="absolute end-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center bg-ink/40 text-ivory" aria-label={dict.a11y.nextImage} onClick={(event) => { event.stopPropagation(); step(1); }}>
           {rtl ? <ChevronLeft /> : <ChevronRight />}
         </button>
       ) : null}
       <div
         ref={stageRef}
-        className="flex h-full w-full items-center justify-center overflow-hidden px-14 py-16"
+        className="grid h-full w-full min-h-0 place-items-center overflow-hidden px-4 py-16"
         onPointerDown={(event) => {
           if (scale <= 1 || event.button !== 0) return;
           drag.current = { x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y };
@@ -230,11 +261,12 @@ function Viewer({
           src={current.url}
           alt={current.alt}
           draggable={false}
-          className="max-h-full max-w-full object-contain"
+          className="h-auto max-h-full w-auto min-h-0 min-w-0 max-w-full object-contain"
           style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
+          onClick={(event) => event.stopPropagation()}
         />
       </div>
-      <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-3 text-sm text-ivory">
+      <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-3 text-sm text-ivory" onClick={(event) => event.stopPropagation()}>
         <button type="button" className="grid h-11 w-11 place-items-center" aria-label={dict.a11y.zoomOut} onClick={() => setScale((value) => clampScale(value - 0.25))}>
           <Minus size={16} />
         </button>
