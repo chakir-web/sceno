@@ -8,6 +8,8 @@ import { z } from "zod";
 import { useCart, useI18n } from "@/components/providers";
 import { CitySelect } from "@/components/store/city-select";
 import { trackMeta } from "@/lib/meta/pixel";
+import { tiktokCommerce, type TikTokCommerce } from "@/lib/tiktok/commerce";
+import { reportTikTok, trackTikTok } from "@/lib/tiktok/pixel";
 import type { Quote } from "@/lib/services/checkout";
 import { formatMoney } from "@/lib/utils";
 
@@ -46,6 +48,10 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
       value: items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
       currency: "MAD",
     });
+    reportTikTok("InitiateCheckout", tiktokCommerce(
+      items.map((item) => ({ id: item.sku?.trim() || item.productId, name: item.name, quantity: item.quantity, price: item.unitPrice })),
+      items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    ), crypto.randomUUID());
   }, [items]);
 
   useEffect(() => {
@@ -104,7 +110,7 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           setError(dict.errors[body.code as keyof typeof dict.errors] ?? dict.errors.generic);
           return;
         }
-        const order = body.order as { order_number: string; total_mad: number };
+        const order = body.order as { order_number: string; total_mad: number; replayed?: boolean };
         trackMeta("Purchase", {
           content_ids: items.map((item) => item.productId),
           content_type: "product",
@@ -113,6 +119,16 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           value: Number(order.total_mad ?? quote?.totalMad ?? 0),
           currency: "MAD",
         }, order.order_number);
+        const tracked = body.tiktok as (TikTokCommerce & { eventId?: string }) | undefined;
+        const purchase = !order.replayed && tracked?.eventId === order.order_number && tracked.content_id
+          ? tracked
+          : !order.replayed
+            ? tiktokCommerce(
+              items.map((item) => ({ id: item.sku?.trim() || item.productId, name: item.name, quantity: item.quantity, price: item.unitPrice })),
+              Number(order.total_mad ?? quote?.totalMad ?? 0),
+            )
+            : null;
+        if (purchase) trackTikTok("Purchase", purchase, order.order_number);
         clear();
         router.push(`/order-success?number=${encodeURIComponent(order.order_number)}`);
       })}

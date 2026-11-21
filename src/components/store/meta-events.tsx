@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useProductColor } from "@/components/store/product-color";
 import { colorKey } from "@/lib/catalog/images";
 import { trackMeta } from "@/lib/meta/pixel";
+import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
+import { reportTikTok } from "@/lib/tiktok/pixel";
 import { unitPrice } from "@/lib/pricing";
 import type { CatalogProduct } from "@/types/commerce";
 
@@ -12,6 +14,7 @@ export function ProductView({ product }: { product: CatalogProduct }) {
   const variant = product.variants.find((item) => item.isActive && colorKey(item.color) === colorKey(selected))
     ?? product.variants.find((item) => item.isActive);
   const value = unitPrice(product.priceMad, product.promoPriceMad, variant?.priceMad ?? null);
+  const contentId = catalogContentId(product, variant);
 
   useEffect(() => {
     trackMeta("ViewContent", {
@@ -23,7 +26,8 @@ export function ProductView({ product }: { product: CatalogProduct }) {
       currency: "MAD",
       contents: [{ id: product.id, quantity: 1, item_price: value }],
     });
-  }, [product.id, product.name, product.categoryName, selected, value]);
+    reportTikTok("ViewContent", tiktokCommerce([{ id: contentId, name: product.name, quantity: 1, price: value }], value, product.categoryName ?? undefined), crypto.randomUUID());
+  }, [contentId, product.id, product.name, product.categoryName, value]);
 
   return null;
 }

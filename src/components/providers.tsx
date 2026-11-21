@@ -13,6 +13,7 @@ export type CartLine = {
   image: string | null;
   unitPrice: number;
   variantLabel: string;
+  sku?: string;
 };
 
 export type CartNotice = {
@@ -98,7 +99,7 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
       setItems((current) => {
         const index = current.findIndex((item) => item.variantId === line.variantId);
         if (index < 0) return [...current, line];
-        return current.map((item) => item.variantId === line.variantId ? { ...item, quantity: Math.min(20, item.quantity + line.quantity) } : item);
+        return current.map((item) => item.variantId === line.variantId ? { ...item, sku: item.sku || line.sku, quantity: Math.min(20, item.quantity + line.quantity) } : item);
       });
       setNotice({
         key: Date.now(),

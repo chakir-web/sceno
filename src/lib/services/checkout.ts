@@ -8,6 +8,7 @@ import { listRates, getSettings } from "@/lib/services/settings";
 export type QuoteLine = {
   productId: string;
   variantId: string;
+  sku: string;
   name: string;
   variantLabel: string;
   quantity: number;
@@ -55,6 +56,7 @@ export async function quoteOrder(input: { city: string; locale: Locale; items: Q
       | {
           id: string;
           product_id: string;
+          sku: string;
           size: string | null;
           color: string | null;
           price_mad: number | string | null;
@@ -92,6 +94,7 @@ export async function quoteOrder(input: { city: string; locale: Locale; items: Q
     lines.push({
       productId: item.productId,
       variantId: item.variantId,
+      sku: row.sku,
       name,
       variantLabel: [row.size, row.color].filter(Boolean).join(" / "),
       quantity: item.quantity,

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
 import { imagesForColor } from "@/lib/catalog/images";
 import { trackMeta } from "@/lib/meta/pixel";
+import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
+import { reportTikTok } from "@/lib/tiktok/pixel";
 import { unitPrice } from "@/lib/pricing";
 import { useProductColor } from "@/components/store/product-color";
 import { formatMoney } from "@/lib/utils";
@@ -83,15 +85,18 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
             image: imagesForColor(product.images, variant.color)[0]?.url ?? null,
             unitPrice: price,
             variantLabel: [variant.size, variant.color].filter(Boolean).join(" / "),
+            sku: variant.sku || product.sku,
           });
+          const addedQuantity = Math.min(quantity, variant.stockQuantity);
           trackMeta("AddToCart", {
             content_ids: [product.id],
             content_type: "product",
             content_name: product.name,
-            value: price * Math.min(quantity, variant.stockQuantity),
+            value: price * addedQuantity,
             currency: "MAD",
-            contents: [{ id: product.id, quantity: Math.min(quantity, variant.stockQuantity), item_price: price }],
+            contents: [{ id: product.id, quantity: addedQuantity, item_price: price }],
           });
+          reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: addedQuantity, price }], price * addedQuantity, product.categoryName ?? undefined), crypto.randomUUID());
           setAdded(true);
         }}
       >
@@ -132,6 +137,7 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             image: imagesForColor(product.images, variant.color)[0]?.url ?? null,
             unitPrice: price,
             variantLabel,
+            sku: variant.sku || product.sku,
           });
           trackMeta("AddToCart", {
             content_ids: [product.id],
@@ -141,6 +147,7 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             currency: "MAD",
             contents: [{ id: product.id, quantity: 1, item_price: price }],
           });
+          reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: 1, price }], price, product.categoryName ?? undefined), crypto.randomUUID());
           setAdded(true);
         }}
       >
