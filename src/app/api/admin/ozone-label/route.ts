@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createDeliveryNote, fetchDeliveryNotePdf } from "@/lib/shipping/ozone";
+import type { DeliveryNotePdfKind } from "@/lib/shipping/ozone-rules";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -10,6 +11,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const orderId = url.searchParams.get("orderId") ?? "";
   const inline = url.searchParams.get("inline") === "1";
+  const ticket = url.searchParams.get("ticket");
+  const kind: DeliveryNotePdfKind = ticket === "a4" ? "tickets-a4" : ticket === "10" ? "tickets-10" : "note";
   const { data } = await session.supabase
     .from("shipments")
     .select("tracking_number, ozone_delivery_note_ref")
@@ -30,9 +33,9 @@ export async function GET(request: Request) {
     ref = String((saved as { ref?: string } | null)?.ref ?? note.ref);
   }
 
-  const pdf = await fetchDeliveryNotePdf(ref);
+  const pdf = await fetchDeliveryNotePdf(ref, kind);
   if (!pdf.ok) return NextResponse.json({ message: pdf.message }, { status: 502 });
-  const filename = `sceno-ozone-${ref.replace(/[^\w.-]/g, "")}.pdf`;
+  const filename = `sceno-ozone-${kind === "note" ? "bl" : "ticket"}-${ref.replace(/[^\w.-]/g, "")}.pdf`;
   return new NextResponse(Buffer.from(pdf.bytes), {
     headers: {
       "Content-Type": "application/pdf",

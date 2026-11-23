@@ -7,7 +7,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCart, useI18n } from "@/components/providers";
 import { CitySelect } from "@/components/store/city-select";
-import { trackMeta } from "@/lib/meta/pixel";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/ga";
+import { metaFunnelEventId, metaPurchaseEventId } from "@/lib/meta/event-id";
+import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { tiktokCommerce, type TikTokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok, trackTikTok } from "@/lib/tiktok/pixel";
 import type { Quote } from "@/lib/services/checkout";
@@ -25,7 +27,7 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
   const { items, clear } = useCart();
   const router = useRouter();
   const idempotency = useRef<string>("");
-  const [city, setCity] = useState(defaultCity || cities[0]?.city || "__other");
+  const [city, setCity] = useState(defaultCity);
   const [other, setOther] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState("");
@@ -40,18 +42,22 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
   useEffect(() => {
     if (checkoutTracked.current || !items.length) return;
     checkoutTracked.current = true;
-    trackMeta("InitiateCheckout", {
+    reportMeta("InitiateCheckout", {
       content_ids: items.map((item) => item.productId),
       content_type: "product",
       contents: items.map((item) => ({ id: item.productId, quantity: item.quantity, item_price: item.unitPrice })),
       num_items: items.reduce((sum, item) => sum + item.quantity, 0),
       value: items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
       currency: "MAD",
-    });
+    }, metaFunnelEventId("InitiateCheckout"));
     reportTikTok("InitiateCheckout", tiktokCommerce(
       items.map((item) => ({ id: item.sku?.trim() || item.productId, name: item.name, quantity: item.quantity, price: item.unitPrice })),
       items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     ), crypto.randomUUID());
+    trackBeginCheckout(
+      items.map((item) => ({ id: item.sku?.trim() || item.productId, name: item.name, variant: item.variantLabel, price: item.unitPrice, quantity: item.quantity })),
+      items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    );
   }, [items]);
 
   useEffect(() => {
@@ -90,6 +96,10 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
     <form
       className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]"
       onSubmit={form.handleSubmit(async (values) => {
+        if (resolvedCity.trim().length < 2) {
+          setError(dict.errors.invalid_city);
+          return;
+        }
         setPending(true);
         setError("");
         const response = await fetch("/api/checkout", {
@@ -110,7 +120,7 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           setError(dict.errors[body.code as keyof typeof dict.errors] ?? dict.errors.generic);
           return;
         }
-        const order = body.order as { order_number: string; total_mad: number; replayed?: boolean };
+        const order = body.order as { order_number: string; total_mad: number; shipping_fee_mad?: number; replayed?: boolean };
         trackMeta("Purchase", {
           content_ids: items.map((item) => item.productId),
           content_type: "product",
@@ -118,7 +128,7 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           num_items: items.reduce((sum, item) => sum + item.quantity, 0),
           value: Number(order.total_mad ?? quote?.totalMad ?? 0),
           currency: "MAD",
-        }, order.order_number);
+        }, metaPurchaseEventId(order.order_number));
         const tracked = body.tiktok as (TikTokCommerce & { eventId?: string }) | undefined;
         const purchase = !order.replayed && tracked?.eventId === order.order_number && tracked.content_id
           ? tracked
@@ -129,6 +139,28 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
             )
             : null;
         if (purchase) trackTikTok("Purchase", purchase, order.order_number);
+        if (!order.replayed) {
+          const lines = quote?.lines?.length ? quote.lines : items.map((item) => ({
+            sku: item.sku ?? "",
+            productId: item.productId,
+            name: item.name,
+            variantLabel: item.variantLabel,
+            unitPriceMad: item.unitPrice,
+            quantity: item.quantity,
+          }));
+          trackPurchase({
+            transactionId: order.order_number,
+            value: Number(order.total_mad ?? quote?.totalMad ?? 0),
+            shipping: Number(order.shipping_fee_mad ?? quote?.shippingFeeMad ?? 0),
+            items: lines.map((line) => ({
+              id: line.sku.trim() || line.productId,
+              name: line.name,
+              variant: line.variantLabel,
+              price: line.unitPriceMad,
+              quantity: line.quantity,
+            })),
+          });
+        }
         clear();
         router.push(`/order-success?number=${encodeURIComponent(order.order_number)}`);
       })}

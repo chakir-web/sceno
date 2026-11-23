@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCart, useI18n } from "@/components/providers";
 import { imagesForColor } from "@/lib/catalog/images";
-import { trackMeta } from "@/lib/meta/pixel";
+import { trackAddToCart } from "@/lib/analytics/ga";
+import { metaFunnelEventId } from "@/lib/meta/event-id";
+import { reportMeta } from "@/lib/meta/pixel";
 import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok } from "@/lib/tiktok/pixel";
 import { unitPrice } from "@/lib/pricing";
@@ -88,15 +90,24 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
             sku: variant.sku || product.sku,
           });
           const addedQuantity = Math.min(quantity, variant.stockQuantity);
-          trackMeta("AddToCart", {
+          reportMeta("AddToCart", {
             content_ids: [product.id],
             content_type: "product",
             content_name: product.name,
             value: price * addedQuantity,
             currency: "MAD",
+            num_items: addedQuantity,
             contents: [{ id: product.id, quantity: addedQuantity, item_price: price }],
-          });
+          }, metaFunnelEventId("AddToCart"));
           reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: addedQuantity, price }], price * addedQuantity, product.categoryName ?? undefined), crypto.randomUUID());
+          trackAddToCart({
+            id: catalogContentId(product, variant),
+            name: product.name,
+            variant: [variant.size, variant.color].filter(Boolean).join(" / ") || undefined,
+            category: product.categoryName ?? undefined,
+            price,
+            quantity: addedQuantity,
+          }, price * addedQuantity);
           setAdded(true);
         }}
       >
@@ -139,15 +150,24 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             variantLabel,
             sku: variant.sku || product.sku,
           });
-          trackMeta("AddToCart", {
+          reportMeta("AddToCart", {
             content_ids: [product.id],
             content_type: "product",
             content_name: product.name,
             value: price,
             currency: "MAD",
+            num_items: 1,
             contents: [{ id: product.id, quantity: 1, item_price: price }],
-          });
+          }, metaFunnelEventId("AddToCart"));
           reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: 1, price }], price, product.categoryName ?? undefined), crypto.randomUUID());
+          trackAddToCart({
+            id: catalogContentId(product, variant),
+            name: product.name,
+            variant: variantLabel || undefined,
+            category: product.categoryName ?? undefined,
+            price,
+            quantity: 1,
+          }, price);
           setAdded(true);
         }}
       >

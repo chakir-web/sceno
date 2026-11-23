@@ -8,6 +8,8 @@ import {
   mapOzoneStatusToScenoStatus,
   matchOzoneCity,
   officialDeliveryNotePdfUrl,
+  ozoneParcelFields,
+  readOzoneCities,
   type OzoneCity,
 } from "@/lib/shipping/ozone-rules";
 
@@ -48,6 +50,62 @@ describe("création Ozone", () => {
     const started = new Date().toISOString();
     expect(ozoneDispatchBlock({ ...open, dispatchStartedAt: started, now: Date.now() })).toBe("ozone_busy");
     expect(ozoneDispatchBlock({ ...open, trackingNumber: "OZE123", dispatchStartedAt: started })).toBe("ozone_exists");
+  });
+
+  it("lit les villes Ozone quand l'identifiant est un nombre", () => {
+    const listed = readOzoneCities({
+      CITIES: {
+        "37": { ID: 37, REF: "AGA", NAME: "Agadir", "DELIVERED-PRICE": 35, "RETURNED-PRICE": 0, "REFUSED-PRICE": 10 },
+        "127": { ID: 127, REF: "FES", NAME: "Fes", "DELIVERED-PRICE": 40, "RETURNED-PRICE": 0, "REFUSED-PRICE": 10 },
+        "1454": { ID: 1454, REF: "Ras", NAME: "Ras El Ma-FES", "DELIVERED-PRICE": 40, "RETURNED-PRICE": 0, "REFUSED-PRICE": 10 },
+      },
+    });
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) return;
+    expect(listed.cities).toHaveLength(3);
+    expect(matchOzoneCity("FES", listed.cities)).toMatchObject({ id: "127", name: "Fes" });
+    expect(matchOzoneCity("Fès", listed.cities)?.id).toBe("127");
+    expect(matchOzoneCity("FEZ", listed.cities)).toBeNull();
+    expect(matchOzoneCity("Ras El Ma-FES", listed.cities)?.id).toBe("1454");
+    const block = ozoneDispatchBlock({ role: "admin", confirmation: "confirmed", shipment: "pending", trackingNumber: "", parcelId: "" });
+    expect(block).toBeNull();
+    expect(block === null && listed.ok).toBe(true);
+  });
+
+  it("distingue une liste illisible d'une liste sans ville exploitable", () => {
+    expect(readOzoneCities({ DEBUG: true }).ok).toBe(false);
+    const empty = readOzoneCities({ CITIES: { "1": { ID: 1, REF: "X", NAME: "" } } });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) expect(empty.message).toBe("La liste des villes Ozone est vide.");
+  });
+
+  it("prépare le colis sans appeler Ozone", () => {
+    const built = ozoneParcelFields({
+      receiver: "Client Test",
+      phone: "0612345678",
+      cityId: "127",
+      address: "Adresse de test",
+      priceMad: 249,
+      nature: "Poncho Nuage x1",
+      reference: "SC-EAC277B9",
+      note: "Sans commentaire",
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(built.fields["parcel-city"]).toBe("127");
+    expect(built.fields["parcel-price"]).toBe("249.00");
+    expect(built.fields["parcel-stock"]).toBe("0");
+    expect(built.fields["parcel-nature"]).toBe("Poncho Nuage x1");
+    expect(built.fields["parcel-note"]).toBe("SC-EAC277B9 — Sans commentaire");
+    expect(built.fields).not.toHaveProperty("tracking-number");
+  });
+
+  it("autorise une nouvelle tentative seulement après l'expiration du verrou", () => {
+    const open = { role: "admin", confirmation: "confirmed", shipment: "pending", trackingNumber: "", parcelId: "" };
+    const now = Date.now();
+    expect(ozoneDispatchBlock({ ...open, dispatchStartedAt: new Date(now - 30_000).toISOString(), now })).toBe("ozone_busy");
+    expect(ozoneDispatchBlock({ ...open, dispatchStartedAt: new Date(now - 3 * 60_000).toISOString(), now })).toBeNull();
+    expect(ozoneDispatchBlock({ ...open, trackingNumber: "OZE123", dispatchStartedAt: new Date(now - 3 * 60_000).toISOString(), now })).toBe("ozone_exists");
   });
 
   it("refuse une ville Ozone absente", () => {
@@ -100,6 +158,8 @@ describe("création Ozone", () => {
     expect(deliveryNoteRef({ ref: "BL240115001" })).toBe("BL240115001");
     expect(deliveryNoteRef({ CHECK_API: { RESULT: "ERROR", MESSAGE: "refus" } })).toBeNull();
     expect(officialDeliveryNotePdfUrl("BL240115001")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note?dn-ref=BL240115001");
+    expect(officialDeliveryNotePdfUrl("BL240115001", "tickets-10")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note-tickets-4-4?dn-ref=BL240115001");
+    expect(officialDeliveryNotePdfUrl("BL240115001", "tickets-a4")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note-tickets?dn-ref=BL240115001");
     expect(officialDeliveryNotePdfUrl("../secret")).toBeNull();
   });
 

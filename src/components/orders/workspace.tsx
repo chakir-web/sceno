@@ -174,6 +174,8 @@ export async function OrderWorkspace({
                   <input type="hidden" name="orderId" value={order.id} />
                   <button className="btn btn-primary" type="submit">{dict.admin.shipments.ozoneSync}</button>
                 </form>
+                <a className="btn btn-primary" href={`/api/admin/ozone-label?orderId=${order.id}&ticket=10`}>{dict.admin.shipments.ozoneTicket}</a>
+                <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}&ticket=a4`}>{dict.admin.shipments.ozoneTicketA4}</a>
                 <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}`}>{dict.admin.shipments.ozoneDownload}</a>
                 <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}&inline=1`} target="_blank" rel="noreferrer">{dict.admin.shipments.ozonePrint}</a>
               </div>

@@ -8,7 +8,9 @@ import { z } from "zod";
 import { useI18n } from "@/components/providers";
 import { CitySelect } from "@/components/store/city-select";
 import { useProductColor } from "@/components/store/product-color";
-import { trackMeta } from "@/lib/meta/pixel";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/ga";
+import { metaFunnelEventId, metaPurchaseEventId } from "@/lib/meta/event-id";
+import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { unitPrice } from "@/lib/pricing";
 import { catalogContentId, tiktokCommerce, type TikTokCommerce } from "@/lib/tiktok/commerce";
@@ -132,15 +134,23 @@ export function DirectOrder({
       value,
       product.categoryName ?? undefined,
     );
-    trackMeta("InitiateCheckout", {
+    reportMeta("InitiateCheckout", {
       content_ids: [product.id],
       content_type: "product",
       contents: [{ id: product.id, quantity: orderedQuantity, item_price: price }],
       num_items: orderedQuantity,
       value,
       currency: "MAD",
-    });
+    }, metaFunnelEventId("InitiateCheckout"));
     reportTikTok("InitiateCheckout", commerce, crypto.randomUUID());
+    trackBeginCheckout([{
+      id: catalogContentId(product, variant),
+      name: product.name,
+      variant: [variant.size, variant.color].filter(Boolean).join(" / ") || undefined,
+      category: product.categoryName ?? undefined,
+      price,
+      quantity: orderedQuantity,
+    }], value);
   }
 
   async function submit(values: FormValues) {
@@ -173,7 +183,7 @@ export function DirectOrder({
         setError(dict.errors[body?.code as keyof typeof dict.errors] ?? dict.errors.generic);
         return;
       }
-      const order = body.order as { order_number: string; total_mad: number; replayed?: boolean };
+      const order = body.order as { order_number: string; total_mad: number; shipping_fee_mad?: number; replayed?: boolean };
       const tracked = body.tiktok as (TikTokCommerce & { eventId?: string }) | undefined;
       const purchase = !order.replayed && tracked?.eventId === order.order_number && tracked.content_id
         ? tracked
@@ -192,8 +202,31 @@ export function DirectOrder({
           num_items: orderedQuantity,
           value: Number(order.total_mad ?? quote?.totalMad ?? 0),
           currency: "MAD",
-        }, order.order_number);
+        }, metaPurchaseEventId(order.order_number));
         trackTikTok("Purchase", purchase, order.order_number);
+      }
+      if (!order.replayed) {
+        const lines = quote?.lines?.length ? quote.lines : [{
+          sku: variant.sku || product.sku,
+          productId: product.id,
+          name: product.name,
+          variantLabel: [variant.size, variant.color].filter(Boolean).join(" / "),
+          unitPriceMad: price,
+          quantity: orderedQuantity,
+        }];
+        trackPurchase({
+          transactionId: order.order_number,
+          value: Number(order.total_mad ?? quote?.totalMad ?? 0),
+          shipping: Number(order.shipping_fee_mad ?? quote?.shippingFeeMad ?? 0),
+          items: lines.map((line) => ({
+            id: line.sku.trim() || line.productId,
+            name: line.name,
+            variant: line.variantLabel,
+            category: product.categoryName ?? undefined,
+            price: line.unitPriceMad,
+            quantity: line.quantity,
+          })),
+        });
       }
       setDone({
         number: order.order_number,

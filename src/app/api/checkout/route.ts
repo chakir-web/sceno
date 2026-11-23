@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { statusFor, type ErrorCode } from "@/lib/errors";
 import { assertSameOrigin } from "@/lib/http";
+import { metaClientContext, sendMetaEvent } from "@/lib/meta/capi";
+import { splitPersonName } from "@/lib/meta/capi-payload";
+import { metaPurchaseEventId } from "@/lib/meta/event-id";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { placeOrder, quoteOrder } from "@/lib/services/checkout";
 import { tiktokCommerce } from "@/lib/tiktok/commerce";
@@ -47,5 +50,39 @@ export async function POST(request: Request) {
       ttp: ttp ? decodeURIComponent(ttp).slice(0, 200) : undefined,
     }).catch(() => undefined);
   }
+
+  const lines = quoted?.ok ? quoted.quote.lines : [];
+  const products = lines.length
+    ? lines.map((line) => ({ id: line.productId, quantity: line.quantity, itemPrice: line.unitPriceMad }))
+    : parsed.data.items.map((item) => ({ id: item.productId, quantity: item.quantity }));
+  const person = splitPersonName(parsed.data.fullName);
+  const context = metaClientContext(request);
+  const eventId = metaPurchaseEventId(result.order.order_number);
+  const pageUrl = sameOriginPage(request);
+  const value = Number(result.order.total_mad);
+  // Attendu avant la fin du handler : Vercel ne fige la fonction qu'une fois cette promesse réglée.
+  await sendMetaEvent({
+    eventName: "Purchase",
+    eventId,
+    eventTime: Math.floor(Date.now() / 1000),
+    eventSourceUrl: pageUrl,
+    value,
+    orderId: result.order.order_number,
+    contentIds: products.map((item) => item.id),
+    contents: products,
+    numItems: products.reduce((sum, item) => sum + item.quantity, 0),
+    user: {
+      phone,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      city: parsed.data.city,
+      country: "ma",
+      ip: context.ip,
+      userAgent: context.userAgent,
+      fbp: context.fbp,
+      fbc: context.fbc,
+    },
+  }).catch(() => undefined);
+
   return NextResponse.json({ ok: true, order: result.order, ...(commerce ? { tiktok: { eventId: result.order.order_number, ...commerce } } : {}) });
 }

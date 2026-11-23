@@ -42,7 +42,7 @@ export function CitySelect({
   }, [cities, query, dict.checkout.cityOther]);
 
   const selected = cities.find((item) => item.city === value);
-  const closedLabel = value === OTHER ? dict.checkout.cityOther : value;
+  const closedLabel = !value ? dict.checkout.cityChoose : value === OTHER ? dict.checkout.cityOther : value;
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +98,7 @@ export function CitySelect({
     <div ref={rootRef} className="relative">
       <input
         id={id}
-        className="field pe-16"
+        className={`field pe-16 ${!open && !value ? "text-stone" : ""}`}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={open}

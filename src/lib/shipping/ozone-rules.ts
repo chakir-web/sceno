@@ -51,6 +51,69 @@ export function findOzoneCityById(id: string, cities: OzoneCity[]) {
   return cities.find((item) => item.id === wanted) ?? null;
 }
 
+function priceOf(value: unknown) {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+/** Lit `CITIES` tel que l'API Ozone le renvoie. `ID` est un nombre, pas une chaîne. */
+export function readOzoneCities(body: unknown): { ok: true; cities: OzoneCity[] } | { ok: false; message: string } {
+  const cities = asRecord(body).CITIES;
+  const entries = Array.isArray(cities) ? cities : cities && typeof cities === "object" ? Object.values(cities) : null;
+  if (!entries) return { ok: false, message: "La liste des villes Ozone est illisible." };
+  const list = entries.flatMap((entry) => {
+    const city = asRecord(entry);
+    const id = textOf(city.ID);
+    const name = textOf(city.NAME);
+    if (!id || !name) return [];
+    return [{
+      id,
+      ref: textOf(city.REF),
+      name,
+      deliveredPriceMad: priceOf(city["DELIVERED-PRICE"]),
+      returnedPriceMad: priceOf(city["RETURNED-PRICE"]),
+      refusedPriceMad: priceOf(city["REFUSED-PRICE"]),
+    }];
+  });
+  if (!list.length) return { ok: false, message: "La liste des villes Ozone est vide." };
+  return { ok: true, cities: list };
+}
+
+export function ozoneParcelFields(draft: {
+  receiver: string;
+  phone: string;
+  cityId: string;
+  address: string;
+  priceMad: number;
+  note?: string;
+  nature?: string;
+  reference?: string;
+}): { ok: true; fields: Record<string, string> } | { ok: false; message: string } {
+  const receiver = draft.receiver.trim();
+  const phone = draft.phone.trim();
+  const cityId = draft.cityId.trim();
+  const address = draft.address.trim();
+  if (receiver.length < 2 || !phone || !cityId || address.length < 5) {
+    return { ok: false, message: "Données Ozone incomplètes." };
+  }
+  if (!Number.isFinite(draft.priceMad) || draft.priceMad <= 0) {
+    return { ok: false, message: "Montant Ozone invalide." };
+  }
+  const note = [draft.reference, draft.note].map((value) => value?.trim() ?? "").filter(Boolean).join(" — ").slice(0, 400);
+  const fields: Record<string, string> = {
+    "parcel-receiver": receiver,
+    "parcel-phone": phone,
+    "parcel-city": cityId,
+    "parcel-address": address,
+    "parcel-price": draft.priceMad.toFixed(2),
+    "parcel-stock": "0",
+  };
+  if (note) fields["parcel-note"] = note;
+  if (draft.nature?.trim()) fields["parcel-nature"] = draft.nature.trim().slice(0, 200);
+  if (draft.priceMad > 5000) fields["parcel-declared-value"] = draft.priceMad.toFixed(2);
+  return { ok: true, fields };
+}
+
 export function mapOzoneStatusToScenoStatus(status: string | null | undefined): ShipmentStatus | null {
   const key = (status ?? "").trim().toLowerCase();
   if (!key) return null;
@@ -130,11 +193,20 @@ export function deliveryNoteRef(body: unknown) {
   return textOf(root.ref) || textOf(root.REF) || textOf(nested.ref) || textOf(nested.REF) || null;
 }
 
-/** URL officielle du PDF standard. Aucun autre hôte n'est accepté. */
-export function officialDeliveryNotePdfUrl(ref: string) {
+const deliveryNotePdfPath = {
+  note: "pdf-delivery-note",
+  "tickets-a4": "pdf-delivery-note-tickets",
+  "tickets-10": "pdf-delivery-note-tickets-4-4",
+} as const;
+
+export type DeliveryNotePdfKind = keyof typeof deliveryNotePdfPath;
+
+/** URL officielle Ozone. Aucun autre hôte n'est accepté. */
+export function officialDeliveryNotePdfUrl(ref: string, kind: DeliveryNotePdfKind = "note") {
   const value = ref.trim();
-  if (!/^[\w.-]{3,80}$/.test(value)) return null;
-  return `https://client.ozoneexpress.ma/pdf-delivery-note?dn-ref=${encodeURIComponent(value)}`;
+  const path = deliveryNotePdfPath[kind];
+  if (!path || !/^[\w.-]{3,80}$/.test(value)) return null;
+  return `https://client.ozoneexpress.ma/${path}?dn-ref=${encodeURIComponent(value)}`;
 }
 
 const preparationShipments = new Set(["pending", "prepared"]);

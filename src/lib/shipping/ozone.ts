@@ -6,7 +6,10 @@ import {
   matchOzoneCity,
   mapOzoneStatusToScenoStatus,
   officialDeliveryNotePdfUrl,
+  type DeliveryNotePdfKind,
   ozoneErrorMessage,
+  ozoneParcelFields,
+  readOzoneCities,
   type OzoneCity,
   type OzoneFacts,
 } from "@/lib/shipping/ozone-rules";
@@ -25,6 +28,7 @@ export type OzoneParcelDraft = {
   priceMad: number;
   note?: string;
   nature?: string;
+  reference?: string;
 };
 
 export type OzoneCall =
@@ -53,19 +57,6 @@ export function redactOzone(value: string) {
   return text.replace(/\s+/g, " ").trim().slice(0, 400);
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function textOf(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function priceOf(value: unknown) {
-  const number = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(number) ? number : 0;
-}
-
 function interpret(body: unknown, fallback: string): OzoneCall {
   const reading = interpretOzoneBody(body);
   if (!reading.ok) return { ok: false, message: redactOzone(reading.message || fallback) };
@@ -83,27 +74,11 @@ export async function getCities(): Promise<{ ok: true; cities: OzoneCity[] } | {
     return { ok: false, message: "Ozone Express est injoignable." };
   }
   const body = await response.json().catch(() => null);
-  const cities = asRecord(body).CITIES;
-  if (!response.ok || !cities || typeof cities !== "object") {
-    return { ok: false, message: "La liste des villes Ozone est illisible." };
-  }
-  const list = Object.values(cities as Record<string, unknown>).flatMap((entry) => {
-    const city = asRecord(entry);
-    const id = textOf(city.ID);
-    const name = textOf(city.NAME);
-    if (!id || !name) return [];
-    return [{
-      id,
-      ref: textOf(city.REF),
-      name,
-      deliveredPriceMad: priceOf(city["DELIVERED-PRICE"]),
-      returnedPriceMad: priceOf(city["RETURNED-PRICE"]),
-      refusedPriceMad: priceOf(city["REFUSED-PRICE"]),
-    }];
-  });
-  if (!list.length) return { ok: false, message: "La liste des villes Ozone est vide." };
-  cityCache = { at: Date.now(), cities: list };
-  return { ok: true, cities: list };
+  if (!response.ok) return { ok: false, message: "La liste des villes Ozone est illisible." };
+  const read = readOzoneCities(body);
+  if (!read.ok) return read;
+  cityCache = { at: Date.now(), cities: read.cities };
+  return read;
 }
 
 async function postRaw(action: string, fields: Record<string, string>) {
@@ -149,28 +124,9 @@ export function getParcelInfo(trackingNumber: string) {
  * N'est appelé que par l'action admin « Envoyer à Ozone Express ».
  */
 export function createParcel(draft: OzoneParcelDraft): Promise<OzoneCall> {
-  const receiver = draft.receiver.trim();
-  const phone = draft.phone.trim();
-  const cityId = draft.cityId.trim();
-  const address = draft.address.trim();
-  if (receiver.length < 2 || !phone || !cityId || address.length < 5) {
-    return Promise.resolve({ ok: false, message: "Données Ozone incomplètes." });
-  }
-  if (!Number.isFinite(draft.priceMad) || draft.priceMad <= 0) {
-    return Promise.resolve({ ok: false, message: "Montant Ozone invalide." });
-  }
-  const fields: Record<string, string> = {
-    "parcel-receiver": receiver,
-    "parcel-phone": phone,
-    "parcel-city": cityId,
-    "parcel-address": address,
-    "parcel-price": draft.priceMad.toFixed(2),
-    "parcel-stock": "0",
-  };
-  if (draft.note?.trim()) fields["parcel-note"] = draft.note.trim().slice(0, 400);
-  if (draft.nature?.trim()) fields["parcel-nature"] = draft.nature.trim().slice(0, 200);
-  if (draft.priceMad > 5000) fields["parcel-declared-value"] = draft.priceMad.toFixed(2);
-  return postForm("add-parcel", fields);
+  const built = ozoneParcelFields(draft);
+  if (!built.ok) return Promise.resolve(built);
+  return postForm("add-parcel", built.fields);
 }
 
 /**
@@ -192,8 +148,8 @@ export async function createDeliveryNote(trackingNumber: string): Promise<{ ok: 
   return { ok: true, ref };
 }
 
-export async function fetchDeliveryNotePdf(ref: string): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; message: string }> {
-  const url = officialDeliveryNotePdfUrl(ref);
+export async function fetchDeliveryNotePdf(ref: string, kind: DeliveryNotePdfKind = "note"): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; message: string }> {
+  const url = officialDeliveryNotePdfUrl(ref, kind);
   if (!url) return { ok: false, message: "Référence de bordereau invalide." };
   let response: Response;
   try {

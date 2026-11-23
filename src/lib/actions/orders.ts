@@ -225,7 +225,7 @@ export async function sendToOzoneAction(_previous: OzoneSendState | null, formDa
   const chosenCityId = String(formData.get("ozoneCityId") ?? "").trim();
   const { data: order } = await supabase
     .from("orders")
-    .select("id, confirmation_status, shipment_status, full_name, phone_normalized, city, address, customer_notes, total_mad, order_items(name_fr, quantity)")
+    .select("id, order_number, confirmation_status, shipment_status, full_name, phone_normalized, city, address, customer_notes, total_mad, order_items(name_fr, quantity)")
     .eq("id", orderId)
     .maybeSingle();
   if (!order) return { ok: false, message: ozoneRefusal.not_found };
@@ -272,6 +272,7 @@ export async function sendToOzoneAction(_previous: OzoneSendState | null, formDa
     address: String(order.address),
     priceMad: price,
     note: String(order.customer_notes ?? ""),
+    reference: String(order.order_number ?? ""),
     nature,
   });
   if (!created.ok || !created.facts.trackingNumber) {
