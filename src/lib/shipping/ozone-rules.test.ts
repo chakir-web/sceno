@@ -8,6 +8,7 @@ import {
   mapOzoneStatusToScenoStatus,
   matchOzoneCity,
   officialDeliveryNotePdfUrl,
+  ozoneErrorMessage,
   ozoneParcelFields,
   readOzoneCities,
   type OzoneCity,
@@ -156,7 +157,12 @@ describe("création Ozone", () => {
 
   it("prépare le bordereau officiel sans l'inventer", () => {
     expect(deliveryNoteRef({ ref: "BL240115001" })).toBe("BL240115001");
+    expect(deliveryNoteRef({ "ADD-BL": { REF: "BL240115001" } })).toBe("BL240115001");
     expect(deliveryNoteRef({ CHECK_API: { RESULT: "ERROR", MESSAGE: "refus" } })).toBeNull();
+    expect(ozoneErrorMessage({
+      CHECK_API: { RESULT: "SUCCESS", MESSAGE: "Valide API Key" },
+      "ADD-BL": { RESULT: "ERROR", MESSAGE: "veuillez ajouter au moins 1 colis" },
+    })).toBe("veuillez ajouter au moins 1 colis");
     expect(officialDeliveryNotePdfUrl("BL240115001")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note?dn-ref=BL240115001");
     expect(officialDeliveryNotePdfUrl("BL240115001", "tickets-10")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note-tickets-4-4?dn-ref=BL240115001");
     expect(officialDeliveryNotePdfUrl("BL240115001", "tickets-a4")).toBe("https://client.ozoneexpress.ma/pdf-delivery-note-tickets?dn-ref=BL240115001");

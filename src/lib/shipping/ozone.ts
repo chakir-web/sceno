@@ -137,8 +137,13 @@ export function createParcel(draft: OzoneParcelDraft): Promise<OzoneCall> {
 export async function createDeliveryNote(trackingNumber: string): Promise<{ ok: true; ref: string } | { ok: false; message: string }> {
   const tracking = trackingNumber.trim();
   if (!tracking) return { ok: false, message: "Numéro de suivi absent." };
-  const created = await postRaw("add-delivery-note", {});
-  if (!created.ok) return created;
+  const created = await postRaw("add-delivery-note", { "Codes[0]": tracking });
+  if (!created.ok) {
+    if (/au moins 1 colis/i.test(created.message)) {
+      return { ok: false, message: "Ozone n'a aucun colis pour cette commande. Effacez le numéro de suivi, enregistrez l'expédition, puis envoyez la commande à Ozone Express." };
+    }
+    return created;
+  }
   const ref = deliveryNoteRef(created.body);
   if (!ref) return { ok: false, message: "Ozone n'a pas renvoyé la référence du bon de livraison." };
   const added = await postRaw("add-parcel-to-delivery-note", { Ref: ref, "Codes[0]": tracking });

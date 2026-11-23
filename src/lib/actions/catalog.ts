@@ -325,7 +325,7 @@ export async function saveSettings(formData: FormData) {
     address: String(formData.get("address") ?? "").trim(),
     currency: "MAD",
     default_locale: formData.get("defaultLocale") === "ar" ? "ar" : "fr",
-    default_shipping_fee_mad: Math.max(0, Number(formData.get("defaultFee") ?? 0) || 0),
+    default_shipping_fee_mad: 0,
     about_fr: String(formData.get("aboutFr") ?? ""),
     about_ar: String(formData.get("aboutAr") ?? ""),
     instagram: String(formData.get("instagram") ?? "").trim(),
@@ -346,7 +346,7 @@ export async function saveSettings(formData: FormData) {
     const clean = rates
       .map((rate) => ({
         city: String(rate.city ?? "").trim(),
-        fee_mad: Math.max(0, Number(rate.feeMad) || 0),
+        fee_mad: 0,
         zone: String(rate.zone ?? "").trim(),
         is_active: Boolean(rate.isActive),
       }))

@@ -36,6 +36,7 @@ export async function OrderWorkspace({
   });
   const ozoneBusy = dispatchBlock === "ozone_busy";
   const canSendOzone = dispatchBlock === null;
+  const ozoneTrackingRejected = Boolean(order.trackingNumber) && !order.ozoneParcelId && /invalid tracking|tracking number not found|au moins 1 colis/i.test(order.ozoneError ?? "");
   let ozoneCities: { id: string; name: string }[] = [];
   let ozoneCityId = "";
   let ozoneCityUnknown = false;
@@ -167,8 +168,9 @@ export async function OrderWorkspace({
             ) : null}
             {ozoneCityError ? <p className="text-sm text-red-900">{ozoneCityError}</p> : null}
             {ozoneBusy ? <p className="text-sm text-stone">{dict.admin.shipments.ozoneBusy}</p> : null}
-            {order.trackingNumber ? <p className="text-sm">{dict.admin.shipments.ozoneCreated}</p> : null}
-            {order.trackingNumber ? (
+            {order.trackingNumber && !ozoneTrackingRejected ? <p className="text-sm">{dict.admin.shipments.ozoneCreated}</p> : null}
+            {ozoneTrackingRejected ? <p className="text-sm text-red-900">{dict.admin.shipments.ozoneNotAParcel}</p> : null}
+            {order.trackingNumber && !ozoneTrackingRejected ? (
               <div className="flex flex-wrap gap-2">
                 <form action={syncOzoneForm}>
                   <input type="hidden" name="orderId" value={order.id} />
@@ -179,7 +181,7 @@ export async function OrderWorkspace({
                 <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}`}>{dict.admin.shipments.ozoneDownload}</a>
                 <a className="btn btn-ghost" href={`/api/admin/ozone-label?orderId=${order.id}&inline=1`} target="_blank" rel="noreferrer">{dict.admin.shipments.ozonePrint}</a>
               </div>
-            ) : !canSendOzone && !ozoneBusy ? <p className="text-sm text-stone">{dict.admin.shipments.ozoneNeedTracking}</p> : null}
+            ) : !ozoneTrackingRejected && !canSendOzone && !ozoneBusy ? <p className="text-sm text-stone">{dict.admin.shipments.ozoneNeedTracking}</p> : null}
           </div>
         </section>
       ) : null}

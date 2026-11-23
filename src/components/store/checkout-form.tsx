@@ -188,7 +188,7 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex justify-between border-t border-line pt-4 text-sm"><span>{dict.checkout.shipping}</span><span>{quote ? formatMoney(quote.shippingFeeMad, locale) : dict.checkout.quoting}</span></div>
+        <div className="mt-4 flex justify-between border-t border-line pt-4 text-sm"><span>{dict.checkout.shipping}</span><span>{quote ? (quote.shippingFeeMad > 0 ? formatMoney(quote.shippingFeeMad, locale) : dict.checkout.shippingFree) : dict.checkout.quoting}</span></div>
         <div className="mt-3 flex justify-between text-lg"><span>{dict.checkout.total}</span><span>{quote ? formatMoney(quote.totalMad, locale) : "—"}</span></div>
         <p className="mt-4 text-xs uppercase tracking-[0.14em] text-champagne">{dict.checkout.cod}</p>
       </aside>

@@ -54,8 +54,8 @@ describe("prix et livraison", () => {
     expect(orderTotal(841, 35)).toBe(876);
     expect(
       resolveShippingFee("Casablanca", [{ city: "casablanca", feeMad: 25, isActive: true }], 65),
-    ).toBe(25);
-    expect(resolveShippingFee("Errachidia", [{ city: "Casablanca", feeMad: 25, isActive: true }], 65)).toBe(65);
+    ).toBe(0);
+    expect(resolveShippingFee("Errachidia", [{ city: "Casablanca", feeMad: 25, isActive: true }], 65)).toBe(0);
   });
 });
 

@@ -361,7 +361,7 @@ export function DirectOrder({
           <div className="flex justify-between gap-3"><span>{dict.direct.product}</span><span>{product.name}</span></div>
           <div className="flex justify-between gap-3"><span>{dict.direct.price}</span><span>{formatMoney(price, locale)}</span></div>
           <div className="flex justify-between gap-3"><span>{dict.direct.quantity}</span><span>{orderedQuantity}</span></div>
-          <div className="flex justify-between gap-3"><span>{dict.direct.shipping}</span><span>{quote ? formatMoney(quote.shippingFeeMad, locale) : dict.checkout.quoting}</span></div>
+          <div className="flex justify-between gap-3"><span>{dict.direct.shipping}</span><span>{quote ? (quote.shippingFeeMad > 0 ? formatMoney(quote.shippingFeeMad, locale) : dict.checkout.shippingFree) : dict.checkout.quoting}</span></div>
           <div className="flex justify-between gap-3 border-t border-line pt-2 text-base"><span>{dict.direct.total}</span><span>{quote ? formatMoney(quote.totalMad, locale) : "—"}</span></div>
           <p className="text-xs uppercase tracking-[0.14em] text-champagne">{dict.checkout.cod}</p>
         </aside>

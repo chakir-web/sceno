@@ -11,11 +11,6 @@ function fold(value: string) {
   return value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("fr");
 }
 
-function feeLabel(feeMad: number) {
-  const amount = Number.isInteger(feeMad) ? String(feeMad) : feeMad.toFixed(2).replace(".", ",");
-  return `${amount} DH`;
-}
-
 export function CitySelect({
   id,
   cities,
@@ -41,7 +36,6 @@ export function CitySelect({
     return otherMatches ? [...matched, { city: OTHER, feeMad: null as number | null }] : matched;
   }, [cities, query, dict.checkout.cityOther]);
 
-  const selected = cities.find((item) => item.city === value);
   const closedLabel = !value ? dict.checkout.cityChoose : value === OTHER ? dict.checkout.cityOther : value;
 
   useEffect(() => {
@@ -118,9 +112,6 @@ export function CitySelect({
         }}
         onKeyDown={onKeyDown}
       />
-      {!open && selected ? (
-        <span dir="ltr" className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-[10px] font-semibold text-champagne">{feeLabel(selected.feeMad)}</span>
-      ) : null}
       {open ? (
         <ul
           id={listId}
@@ -146,11 +137,6 @@ export function CitySelect({
                 }}
               >
                 <span className="truncate">{label}</span>
-                {item.feeMad != null ? (
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span dir="ltr" className="text-[10px] font-semibold text-champagne">{feeLabel(item.feeMad)}</span>
-                  </span>
-                ) : null}
               </li>
             );
           }) : <li className="px-4 py-2.5 text-sm text-stone">{dict.checkout.cityEmpty}</li>}

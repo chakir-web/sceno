@@ -140,8 +140,8 @@ export function ozoneErrorMessage(body: unknown) {
   const root = asRecord(body);
   const direct = resultMessage(root);
   if (direct) return direct;
-  for (const key of ["CHECK_API", "ADD-PARCEL", "PARCEL", "PARCEL-INFO", "TRACKING", "DELIVERY-NOTE"]) {
-    const message = resultMessage(root[key]);
+  for (const value of Object.values(root)) {
+    const message = resultMessage(value);
     if (message) return message;
   }
   return null;
@@ -189,8 +189,12 @@ export function interpretOzoneBody(body: unknown): OzoneBody {
 
 export function deliveryNoteRef(body: unknown) {
   const root = asRecord(body);
-  const nested = asRecord(root["DELIVERY-NOTE"]);
-  return textOf(root.ref) || textOf(root.REF) || textOf(nested.ref) || textOf(nested.REF) || null;
+  const containers = [root, ...Object.values(root).map((value) => asRecord(value))];
+  for (const record of containers) {
+    const ref = textOf(record.ref) || textOf(record.REF) || textOf(record["DN-REF"]) || textOf(record["BL-REF"]);
+    if (ref) return ref;
+  }
+  return null;
 }
 
 const deliveryNotePdfPath = {

@@ -23,10 +23,12 @@ export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Livraison offerte. Le barème des villes ne s'ajoute plus au montant client. */
 export function resolveShippingFee(city: string, rates: ShippingRate[], defaultFeeMad: number) {
-  const key = city.trim().toLocaleLowerCase("fr");
-  const match = rates.find((rate) => rate.isActive && rate.city.trim().toLocaleLowerCase("fr") === key);
-  return roundMoney(match ? match.feeMad : defaultFeeMad);
+  void city;
+  void rates;
+  void defaultFeeMad;
+  return 0;
 }
 
 export function orderTotal(subtotalMad: number, shippingFeeMad: number) {

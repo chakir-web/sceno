@@ -69,27 +69,27 @@ insert into public.carriers (id, name, phone, notes) values
 on conflict (id) do nothing;
 
 insert into public.shipping_rates (city, fee_mad, zone) values
-  ('Casablanca', 25, 'Centre'),
-  ('Rabat', 30, 'Centre'),
-  ('Salé', 30, 'Centre'),
-  ('Témara', 35, 'Centre'),
-  ('Mohammedia', 35, 'Centre'),
-  ('Kénitra', 40, 'Nord'),
-  ('Marrakech', 45, 'Sud'),
-  ('Tanger', 50, 'Nord'),
-  ('Fès', 45, 'Est'),
-  ('Meknès', 45, 'Est'),
-  ('Agadir', 55, 'Sud'),
-  ('Oujda', 60, 'Est'),
-  ('Tétouan', 50, 'Nord'),
-  ('El Jadida', 40, 'Centre'),
-  ('Nador', 60, 'Est')
+  ('Casablanca', 0, 'Centre'),
+  ('Rabat', 0, 'Centre'),
+  ('Salé', 0, 'Centre'),
+  ('Témara', 0, 'Centre'),
+  ('Mohammedia', 0, 'Centre'),
+  ('Kénitra', 0, 'Nord'),
+  ('Marrakech', 0, 'Sud'),
+  ('Tanger', 0, 'Nord'),
+  ('Fès', 0, 'Est'),
+  ('Meknès', 0, 'Est'),
+  ('Agadir', 0, 'Sud'),
+  ('Oujda', 0, 'Est'),
+  ('Tétouan', 0, 'Nord'),
+  ('El Jadida', 0, 'Centre'),
+  ('Nador', 0, 'Est')
 on conflict (city) do nothing;
 
 update public.store_settings
 set support_phone = '',
     support_email = '',
     address = '',
-    default_shipping_fee_mad = 65,
+    default_shipping_fee_mad = 0,
     about_fr = 'SCENO est une maison d''objets pour le Maroc. Chaque pièce est choisie pour sa matière, sa ligne et sa tenue dans le temps.',
     about_ar = 'SCENO دار أشياء للمغرب. كل قطعة مختارة لمادتها وخطها وثباتها مع الوقت.';
