@@ -9,7 +9,7 @@ import { statusLabel } from "@/lib/i18n";
 import { formatMoney } from "@/lib/utils";
 import type { Carrier, OrderRecord } from "@/types/commerce";
 
-export function ShipmentBoard({ orders, carriers }: { orders: OrderRecord[]; carriers: Carrier[] }) {
+export function ShipmentBoard({ orders, carriers, ozoneReady }: { orders: OrderRecord[]; carriers: Carrier[]; ozoneReady: boolean }) {
   const { dict, locale } = useI18n();
   const copy = dict.admin.shipments;
   const [selected, setSelected] = useState<string[]>([]);
@@ -18,7 +18,7 @@ export function ShipmentBoard({ orders, carriers }: { orders: OrderRecord[]; car
 
   return (
     <div className="grid gap-6">
-      <Notice tone="info">{copy.noApi} {copy.future}</Notice>
+      <Notice tone="info">{ozoneReady ? copy.ozoneConnected : `${copy.noApi} ${copy.future}`}</Notice>
       <form
         className="grid gap-3 border border-line bg-ivory p-4 md:grid-cols-3"
         onSubmit={async (event) => {

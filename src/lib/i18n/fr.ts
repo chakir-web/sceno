@@ -538,6 +538,7 @@ export const fr = {
       title: "Expéditions externes",
       lead: "SCENO n'a pas de livreurs internes. Cette section prépare les commandes confirmées pour un transporteur externe.",
       noApi: "Aucune API transporteur n'est connectée. La gestion est manuelle : export CSV, numéro de suivi et historique.",
+      ozoneConnected: "Ozone Express est connecté. Le colis et le ticket de livraison se créent depuis la fiche de chaque commande. L'enregistrement manuel reste disponible.",
       future: "Le module ShippingProvider pourra recevoir plus tard l'API réelle du transporteur. Elle n'est pas simulée.",
       carrier: "Transporteur",
       tracking: "Numéro de suivi",
