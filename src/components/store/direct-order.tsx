@@ -58,7 +58,7 @@ export function DirectOrder({
   const variants = product.variants.filter((variant) => variant.isActive);
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
-  const [city, setCity] = useState(defaultCity || cities[0]?.city || "__other");
+  const [city, setCity] = useState(defaultCity);
   const [other, setOther] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState("");

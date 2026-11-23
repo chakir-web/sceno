@@ -105,6 +105,7 @@ export function CitySelect({
         aria-controls={listId}
         aria-activedescendant={open && options[active] ? `${listId}-opt-${active}` : undefined}
         placeholder={dict.checkout.citySearch}
+        autoComplete="off"
         value={open ? query : closedLabel}
         onChange={(event) => {
           setQuery(event.target.value);

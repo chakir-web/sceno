@@ -27,7 +27,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const similar = direct ? [] : await listSimilar(product.data, locale);
   const rates = direct ? await listRates(false) : null;
   const cities = rates?.data.map((rate) => ({ city: rate.city, feeMad: rate.feeMad })) ?? [];
-  const casablanca = cities.find((item) => item.city.trim().toLocaleLowerCase("fr") === "casablanca");
   return (
     <article>
       {direct ? null : <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>}
@@ -36,7 +35,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="mt-6 grid items-start gap-10 lg:grid-cols-2">
         <Gallery product={product.data} />
         {direct ? (
-          <DirectOrder product={product.data} cities={cities} defaultCity={casablanca?.city ?? cities[0]?.city ?? ""} />
+          <DirectOrder product={product.data} cities={cities} defaultCity="" />
         ) : (
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-champagne">{product.data.categoryName}</p>
