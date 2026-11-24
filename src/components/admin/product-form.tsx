@@ -26,7 +26,10 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
   const router = useRouter();
   const copy = dict.admin.products;
   const draftKey = product?.id ?? "new";
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [variantFiles, setVariantFiles] = useState<Record<string, File>>({});
+  const [variantPreviews, setVariantPreviews] = useState<Record<string, string>>({});
   const form = useForm<Values>({
     resolver: zodResolver(productInputSchema),
     defaultValues: drafts.get(draftKey) ?? (product ? {
@@ -110,16 +113,35 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
             form.setError("root", { message: copy.duplicateSku });
             return;
           }
+          const photoWithoutColor = variants.fields.some((field, index) => variantFiles[field.id] && !values.variants[index]?.color.trim());
+          if (photoWithoutColor) {
+            form.setError("root", { message: copy.variantPhotoNeedsColor });
+            return;
+          }
           const result = await saveProduct(values);
           if (!result.ok) {
             form.setError("root", { message: messageFor(dict, result.code) });
             return;
           }
-          const files = pendingFiles;
-          for (const file of files) {
+          const uploads: FormData[] = [];
+          if (coverFile) {
+            const data = new FormData();
+            data.set("productId", result.id);
+            data.set("file", coverFile);
+            data.set("cover", "1");
+            uploads.push(data);
+          }
+          variants.fields.forEach((field, index) => {
+            const file = variantFiles[field.id];
+            if (!file) return;
             const data = new FormData();
             data.set("productId", result.id);
             data.set("file", file);
+            data.set("color", values.variants[index]?.color.trim() ?? "");
+            data.set("primary", "1");
+            uploads.push(data);
+          });
+          for (const data of uploads) {
             const uploaded = await uploadProductImage(data);
             if (!uploaded.ok) {
               drafts.set(draftKey, { ...form.getValues(), id: result.id });
@@ -155,40 +177,83 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
             <label><input type="checkbox" {...form.register("isNew")} /> {copy.isNew}</label>
           </div>
         </div>
+        <div className="border border-line p-4">
+          <h2 className="font-display text-3xl">{copy.cover}</h2>
+          <p className="mt-2 text-sm text-stone">{copy.coverHint}</p>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setCoverFile(file);
+                setCoverPreview((current) => {
+                  if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
+                  return file ? URL.createObjectURL(file) : null;
+                });
+              }}
+            />
+            {(() => {
+              const coverShown = coverPreview || product?.images.find((image) => !image.color)?.url;
+              return coverShown ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverShown} alt="" className="h-20 w-20 object-cover" />
+              ) : null;
+            })()}
+          </div>
+        </div>
         <div>
           <div className="flex items-center justify-between">
             <h2 className="font-display text-3xl">{copy.variants}</h2>
             <button type="button" className="btn btn-ghost" onClick={() => variants.append({ sku: "", size: "", color: "", colorHex: "", priceMad: null, stockQuantity: 0 })}>{copy.addVariant}</button>
           </div>
           <div className="mt-4 grid gap-4">
-            {variants.fields.map((field, index) => (
-              <div key={field.id} className="grid gap-3 border border-line p-4 md:grid-cols-6">
-                <input className="field" placeholder="SKU" {...form.register(`variants.${index}.sku`)} />
-                <input className="field" placeholder={copy.size} {...form.register(`variants.${index}.size`)} />
-                <input className="field" placeholder={copy.color} {...form.register(`variants.${index}.color`)} />
-                <input className="field" placeholder={copy.colorHex} {...form.register(`variants.${index}.colorHex`)} />
-                <input className="field" type="number" step="0.01" placeholder={copy.variantPrice} {...form.register(`variants.${index}.priceMad`, { setValueAs: (value) => value === "" || value == null ? null : Number(value) })} />
-                <input className="field" type="number" placeholder={dict.common.quantity} {...form.register(`variants.${index}.stockQuantity`, { valueAsNumber: true })} />
-              </div>
-            ))}
+            {variants.fields.map((field, index) => {
+              const color = form.watch(`variants.${index}.color`);
+              const savedPhoto = product?.images.find((image) => image.color && image.color.trim().toLocaleLowerCase("fr") === color.trim().toLocaleLowerCase("fr"))?.url;
+              const preview = variantPreviews[field.id] || savedPhoto;
+              return (
+                <div key={field.id} className="grid gap-3 border border-line p-4">
+                  <div className="grid gap-3 md:grid-cols-6">
+                    <input className="field" placeholder="SKU" {...form.register(`variants.${index}.sku`)} />
+                    <input className="field" placeholder={copy.size} {...form.register(`variants.${index}.size`)} />
+                    <input className="field" placeholder={copy.color} {...form.register(`variants.${index}.color`)} />
+                    <input className="field" placeholder={copy.colorHex} {...form.register(`variants.${index}.colorHex`)} />
+                    <input className="field" type="number" step="0.01" placeholder={copy.variantPrice} {...form.register(`variants.${index}.priceMad`, { setValueAs: (value) => value === "" || value == null ? null : Number(value) })} />
+                    <input className="field" type="number" placeholder={dict.common.quantity} {...form.register(`variants.${index}.stockQuantity`, { valueAsNumber: true })} />
+                  </div>
+                  <label className="flex flex-wrap items-center gap-3 text-sm">
+                    {copy.variantPhoto}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        setVariantFiles((current) => {
+                          const next = { ...current };
+                          if (file) next[field.id] = file;
+                          else delete next[field.id];
+                          return next;
+                        });
+                        setVariantPreviews((current) => {
+                          if (current[field.id]?.startsWith("blob:")) URL.revokeObjectURL(current[field.id]);
+                          const next = { ...current };
+                          if (file) next[field.id] = URL.createObjectURL(file);
+                          else delete next[field.id];
+                          return next;
+                        });
+                      }}
+                    />
+                    {preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={preview} alt="" className="h-14 w-14 object-cover" />
+                    ) : null}
+                  </label>
+                </div>
+              );
+            })}
           </div>
         </div>
-        {product ? null : (
-          <div className="border border-line p-4">
-            <h2 className="font-display text-3xl">{copy.images}</h2>
-            <input
-              className="mt-4"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(event) => {
-                remember();
-                setPendingFiles(Array.from(event.target.files ?? []));
-              }}
-            />
-            {pendingFiles.length > 0 ? <p className="mt-3 text-sm">{pendingFiles.map((file) => file.name).join(", ")}</p> : null}
-          </div>
-        )}
         {error ? <Notice tone="danger">{error}{missing.length ? ` ${missing.join(", ")}.` : ""}</Notice> : null}
         <button className="btn btn-primary w-fit" type="submit">{dict.common.save}</button>
       </form>

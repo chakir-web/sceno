@@ -188,9 +188,19 @@ export async function uploadProductImage(formData: FormData) {
   });
   if (error) return fail("generic");
   const url = supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
-  const color = String(formData.get("color") ?? "").trim();
-  const { data: last } = await supabase.from("product_images").select("sort_order").eq("product_id", productId).order("sort_order", { ascending: false }).limit(1);
-  const sortOrder = (last?.[0]?.sort_order ?? -1) + 1;
+  const cover = formData.get("cover") === "1";
+  const color = cover ? "" : String(formData.get("color") ?? "").trim();
+  const { data: existing } = await supabase.from("product_images").select("id, sort_order, color").eq("product_id", productId);
+  const rows = existing ?? [];
+  let sortOrder = rows.reduce((max, row) => Math.max(max, Number(row.sort_order) || 0), -1) + 1;
+  if (cover) {
+    await Promise.all(rows.map((row) => supabase.from("product_images").update({ sort_order: (Number(row.sort_order) || 0) + 1 }).eq("id", row.id)));
+    sortOrder = 0;
+  } else if (formData.get("primary") === "1" && color) {
+    const same = rows.filter((row) => String(row.color ?? "").trim().toLocaleLowerCase("fr") === color.toLocaleLowerCase("fr"));
+    const first = same.reduce((min, row) => Math.min(min, Number(row.sort_order) || 0), Number.POSITIVE_INFINITY);
+    if (Number.isFinite(first)) sortOrder = first - 1;
+  }
   const { data: image, error: insertError } = await supabase
     .from("product_images")
     .insert({ product_id: productId, url, alt: file.name, sort_order: sortOrder, color: color || null })
