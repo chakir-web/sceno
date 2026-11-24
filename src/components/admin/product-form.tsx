@@ -27,7 +27,6 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
   const copy = dict.admin.products;
   const draftKey = product?.id ?? "new";
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [photosOpen, setPhotosOpen] = useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(productInputSchema),
     defaultValues: drafts.get(draftKey) ?? (product ? {
@@ -88,32 +87,29 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
     return () => subscription.unsubscribe();
   }, [draftKey, form]);
 
-  function openPhotos() {
-    setPhotosOpen(true);
-    window.setTimeout(() => document.getElementById("photos-couleur")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-  }
-
-  useEffect(() => {
-    if (window.location.hash !== "#photos-couleur") return;
-    setPhotosOpen(true);
-    window.setTimeout(() => document.getElementById("photos-couleur")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-  }, []);
-
   const draftColors = form.watch("variants").map((variant) => variant.color ?? "");
+  const missing = [
+    form.formState.errors.nameFr && copy.nameFr,
+    form.formState.errors.nameAr && copy.nameAr,
+    form.formState.errors.sku && copy.sku,
+    form.formState.errors.categoryId && copy.category,
+    form.formState.errors.priceMad && copy.price,
+    ...(Array.isArray(form.formState.errors.variants)
+      ? form.formState.errors.variants.flatMap((variant, index) => variant ? [`${copy.variants} ${index + 1}`] : [])
+      : []),
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 border border-ink bg-mist p-4">
-        <div>
-          <p className="font-display text-3xl">{copy.photosByColor}</p>
-          <p className="mt-1 max-w-xl text-sm text-stone">{copy.photosByColorHint}</p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={openPhotos}>{copy.managePhotosByColor}</button>
-      </div>
       <form
         className="grid gap-6"
         onSubmit={form.handleSubmit(async (values) => {
           remember();
+          const skus = values.variants.map((variant) => variant.sku.trim().toLocaleLowerCase("fr"));
+          if (new Set(skus).size !== skus.length) {
+            form.setError("root", { message: copy.duplicateSku });
+            return;
+          }
           const result = await saveProduct(values);
           if (!result.ok) {
             form.setError("root", { message: messageFor(dict, result.code) });
@@ -134,7 +130,9 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
           }
           drafts.delete(draftKey);
           drafts.delete(result.id);
-          router.push(`/admin/products/${result.id}#photos-couleur`);
+          router.push(`/admin/products/${result.id}`);
+        }, () => {
+          form.setError("root", { message: copy.formInvalid });
         })}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -191,17 +189,10 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
             {pendingFiles.length > 0 ? <p className="mt-3 text-sm">{pendingFiles.map((file) => file.name).join(", ")}</p> : null}
           </div>
         )}
-        {error ? <Notice tone="danger">{error}</Notice> : null}
+        {error ? <Notice tone="danger">{error}{missing.length ? ` ${missing.join(", ")}.` : ""}</Notice> : null}
         <button className="btn btn-primary w-fit" type="submit">{dict.common.save}</button>
       </form>
-      {photosOpen ? (
-        product ? <ColorPhotos product={product} draftColors={draftColors} /> : (
-          <div id="photos-couleur" className="border border-line p-4">
-            <h2 className="font-display text-3xl">{copy.photosByColor}</h2>
-            <p className="mt-2 text-sm">{copy.saveBeforePhotos}</p>
-          </div>
-        )
-      ) : null}
+      {product ? <ColorPhotos product={product} draftColors={draftColors} /> : null}
     </div>
   );
 }
