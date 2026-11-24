@@ -10,6 +10,7 @@ import { CitySelect } from "@/components/store/city-select";
 import { useProductColor } from "@/components/store/product-color";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/ga";
 import { metaFunnelEventId, metaPurchaseEventId } from "@/lib/meta/event-id";
+import { getMetaProductData } from "@/lib/meta/product";
 import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { unitPrice } from "@/lib/pricing";
@@ -134,14 +135,8 @@ export function DirectOrder({
       value,
       product.categoryName ?? undefined,
     );
-    reportMeta("InitiateCheckout", {
-      content_ids: [product.id],
-      content_type: "product",
-      contents: [{ id: product.id, quantity: orderedQuantity, item_price: price }],
-      num_items: orderedQuantity,
-      value,
-      currency: "MAD",
-    }, metaFunnelEventId("InitiateCheckout"));
+    const meta = getMetaProductData(product, { variantSku: variant.sku, quantity: orderedQuantity, unitPrice: price });
+    if (meta) reportMeta("InitiateCheckout", meta, metaFunnelEventId("InitiateCheckout"));
     reportTikTok("InitiateCheckout", commerce, crypto.randomUUID());
     trackBeginCheckout([{
       id: catalogContentId(product, variant),
@@ -195,14 +190,21 @@ export function DirectOrder({
           )
           : null;
       if (purchase) {
-        trackMeta("Purchase", {
-          content_ids: [product.id],
-          content_type: "product",
-          contents: [{ id: product.id, quantity: orderedQuantity, item_price: price }],
-          num_items: orderedQuantity,
-          value: Number(order.total_mad ?? quote?.totalMad ?? 0),
-          currency: "MAD",
-        }, metaPurchaseEventId(order.order_number));
+        const meta = getMetaProductData(product, {
+          variantSku: variant.sku,
+          quantity: orderedQuantity,
+          unitPrice: price,
+        });
+        if (meta) {
+          trackMeta("Purchase", {
+            content_ids: meta.content_ids,
+            content_type: meta.content_type,
+            contents: meta.contents,
+            num_items: meta.num_items,
+            currency: meta.currency,
+            value: Number(order.total_mad ?? quote?.totalMad ?? 0),
+          }, metaPurchaseEventId(order.order_number));
+        }
         trackTikTok("Purchase", purchase, order.order_number);
       }
       if (!order.replayed) {

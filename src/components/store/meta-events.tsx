@@ -5,6 +5,7 @@ import { useProductColor } from "@/components/store/product-color";
 import { colorKey } from "@/lib/catalog/images";
 import { trackViewItem } from "@/lib/analytics/ga";
 import { metaFunnelEventId } from "@/lib/meta/event-id";
+import { getMetaProductData } from "@/lib/meta/product";
 import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok } from "@/lib/tiktok/pixel";
@@ -19,16 +20,8 @@ export function ProductView({ product }: { product: CatalogProduct }) {
   const contentId = catalogContentId(product, variant);
 
   useEffect(() => {
-    reportMeta("ViewContent", {
-      content_ids: [product.id],
-      content_type: "product",
-      content_name: product.name,
-      content_category: product.categoryName ?? undefined,
-      value,
-      currency: "MAD",
-      num_items: 1,
-      contents: [{ id: product.id, quantity: 1, item_price: value }],
-    }, metaFunnelEventId("ViewContent"));
+    const meta = getMetaProductData(product, { variantSku: variant?.sku, quantity: 1, unitPrice: value });
+    if (meta) reportMeta("ViewContent", meta, metaFunnelEventId("ViewContent"));
     trackViewItem({
       id: contentId,
       name: product.name,
@@ -37,7 +30,7 @@ export function ProductView({ product }: { product: CatalogProduct }) {
       quantity: 1,
     }, value);
     reportTikTok("ViewContent", tiktokCommerce([{ id: contentId, name: product.name, quantity: 1, price: value }], value, product.categoryName ?? undefined), crypto.randomUUID());
-  }, [contentId, product.id, product.name, product.categoryName, value]);
+  }, [contentId, product, variant?.sku, value]);
 
   return null;
 }

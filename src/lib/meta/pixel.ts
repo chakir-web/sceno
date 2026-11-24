@@ -15,7 +15,27 @@ declare global {
   }
 }
 
+const DEBUG_EVENTS = new Set(["ViewContent", "AddToCart", "InitiateCheckout", "Purchase"]);
+
+function debugMeta(event: string, params: MetaParams | undefined, eventID?: string) {
+  if (!DEBUG_EVENTS.has(event) || typeof window === "undefined") return;
+  const enabled = process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).has("meta_debug");
+  if (!enabled) return;
+  const contentIds = Array.isArray(params?.content_ids) ? params.content_ids.filter((id): id is string => typeof id === "string") : [];
+  const contents = Array.isArray(params?.contents) ? params.contents : [];
+  console.info("[meta]", {
+    event,
+    event_id: eventID ?? "",
+    content_ids: contentIds,
+    content_type: params?.content_type === "product" ? "product" : "",
+    contents,
+    value: typeof params?.value === "number" ? params.value : null,
+    currency: params?.currency === "MAD" ? "MAD" : "",
+  });
+}
+
 export function trackMeta(event: string, params?: MetaParams, eventID?: string) {
+  debugMeta(event, params, eventID);
   if (!META_PIXEL_ID || typeof window === "undefined" || typeof window.fbq !== "function") return;
   window.fbq("track", event, params, eventID ? { eventID } : undefined);
 }

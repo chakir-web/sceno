@@ -4,6 +4,7 @@ import { assertSameOrigin } from "@/lib/http";
 import { metaClientContext, sendMetaEvent } from "@/lib/meta/capi";
 import { splitPersonName } from "@/lib/meta/capi-payload";
 import { metaPurchaseEventId } from "@/lib/meta/event-id";
+import { metaContentId } from "@/lib/meta/product";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { placeOrder, quoteOrder } from "@/lib/services/checkout";
 import { tiktokCommerce } from "@/lib/tiktok/commerce";
@@ -53,8 +54,8 @@ export async function POST(request: Request) {
 
   const lines = quoted?.ok ? quoted.quote.lines : [];
   const products = lines.length
-    ? lines.map((line) => ({ id: line.productId, quantity: line.quantity, itemPrice: line.unitPriceMad }))
-    : parsed.data.items.map((item) => ({ id: item.productId, quantity: item.quantity }));
+    ? lines.map((line) => ({ id: metaContentId({ id: line.productId, sku: line.sku }), quantity: line.quantity, itemPrice: line.unitPriceMad }))
+    : parsed.data.items.map((item) => ({ id: metaContentId({ id: item.productId }), quantity: item.quantity }));
   const person = splitPersonName(parsed.data.fullName);
   const context = metaClientContext(request);
   const eventId = metaPurchaseEventId(result.order.order_number);

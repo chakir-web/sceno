@@ -5,6 +5,7 @@ import { useCart, useI18n } from "@/components/providers";
 import { imagesForColor } from "@/lib/catalog/images";
 import { trackAddToCart } from "@/lib/analytics/ga";
 import { metaFunnelEventId } from "@/lib/meta/event-id";
+import { getMetaProductData } from "@/lib/meta/product";
 import { reportMeta } from "@/lib/meta/pixel";
 import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok } from "@/lib/tiktok/pixel";
@@ -90,15 +91,8 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
             sku: variant.sku || product.sku,
           });
           const addedQuantity = Math.min(quantity, variant.stockQuantity);
-          reportMeta("AddToCart", {
-            content_ids: [product.id],
-            content_type: "product",
-            content_name: product.name,
-            value: price * addedQuantity,
-            currency: "MAD",
-            num_items: addedQuantity,
-            contents: [{ id: product.id, quantity: addedQuantity, item_price: price }],
-          }, metaFunnelEventId("AddToCart"));
+          const meta = getMetaProductData(product, { variantSku: variant.sku, quantity: addedQuantity, unitPrice: price });
+          if (meta) reportMeta("AddToCart", meta, metaFunnelEventId("AddToCart"));
           reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: addedQuantity, price }], price * addedQuantity, product.categoryName ?? undefined), crypto.randomUUID());
           trackAddToCart({
             id: catalogContentId(product, variant),
@@ -150,15 +144,8 @@ export function QuickAdd({ product }: { product: CatalogProduct }) {
             variantLabel,
             sku: variant.sku || product.sku,
           });
-          reportMeta("AddToCart", {
-            content_ids: [product.id],
-            content_type: "product",
-            content_name: product.name,
-            value: price,
-            currency: "MAD",
-            num_items: 1,
-            contents: [{ id: product.id, quantity: 1, item_price: price }],
-          }, metaFunnelEventId("AddToCart"));
+          const meta = getMetaProductData(product, { variantSku: variant.sku, quantity: 1, unitPrice: price });
+          if (meta) reportMeta("AddToCart", meta, metaFunnelEventId("AddToCart"));
           reportTikTok("AddToCart", tiktokCommerce([{ id: catalogContentId(product, variant), name: product.name, quantity: 1, price }], price, product.categoryName ?? undefined), crypto.randomUUID());
           trackAddToCart({
             id: catalogContentId(product, variant),

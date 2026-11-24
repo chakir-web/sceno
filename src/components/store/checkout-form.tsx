@@ -9,6 +9,7 @@ import { useCart, useI18n } from "@/components/providers";
 import { CitySelect } from "@/components/store/city-select";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/ga";
 import { metaFunnelEventId, metaPurchaseEventId } from "@/lib/meta/event-id";
+import { getMetaCartData } from "@/lib/meta/product";
 import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { tiktokCommerce, type TikTokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok, trackTikTok } from "@/lib/tiktok/pixel";
@@ -42,14 +43,11 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
   useEffect(() => {
     if (checkoutTracked.current || !items.length) return;
     checkoutTracked.current = true;
-    reportMeta("InitiateCheckout", {
-      content_ids: items.map((item) => item.productId),
-      content_type: "product",
-      contents: items.map((item) => ({ id: item.productId, quantity: item.quantity, item_price: item.unitPrice })),
-      num_items: items.reduce((sum, item) => sum + item.quantity, 0),
-      value: items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
-      currency: "MAD",
-    }, metaFunnelEventId("InitiateCheckout"));
+    const meta = getMetaCartData(
+      items.map((item) => ({ id: item.productId, sku: item.sku, quantity: item.quantity, unitPrice: item.unitPrice })),
+      items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    );
+    if (meta) reportMeta("InitiateCheckout", meta, metaFunnelEventId("InitiateCheckout"));
     reportTikTok("InitiateCheckout", tiktokCommerce(
       items.map((item) => ({ id: item.sku?.trim() || item.productId, name: item.name, quantity: item.quantity, price: item.unitPrice })),
       items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -121,14 +119,11 @@ export function CheckoutForm({ cities, defaultCity }: { cities: { city: string; 
           return;
         }
         const order = body.order as { order_number: string; total_mad: number; shipping_fee_mad?: number; replayed?: boolean };
-        trackMeta("Purchase", {
-          content_ids: items.map((item) => item.productId),
-          content_type: "product",
-          contents: items.map((item) => ({ id: item.productId, quantity: item.quantity, item_price: item.unitPrice })),
-          num_items: items.reduce((sum, item) => sum + item.quantity, 0),
-          value: Number(order.total_mad ?? quote?.totalMad ?? 0),
-          currency: "MAD",
-        }, metaPurchaseEventId(order.order_number));
+        const meta = getMetaCartData(
+          items.map((item) => ({ id: item.productId, sku: item.sku, quantity: item.quantity, unitPrice: item.unitPrice })),
+          Number(order.total_mad ?? quote?.totalMad ?? 0),
+        );
+        if (meta) trackMeta("Purchase", meta, metaPurchaseEventId(order.order_number));
         const tracked = body.tiktok as (TikTokCommerce & { eventId?: string }) | undefined;
         const purchase = !order.replayed && tracked?.eventId === order.order_number && tracked.content_id
           ? tracked
