@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { saveProduct, uploadProductImage } from "@/lib/actions/catalog";
@@ -30,6 +30,8 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [variantFiles, setVariantFiles] = useState<Record<string, File>>({});
   const [variantPreviews, setVariantPreviews] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const form = useForm<Values>({
     resolver: zodResolver(productInputSchema),
     defaultValues: drafts.get(draftKey) ?? (product ? {
@@ -107,19 +109,28 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
       <form
         className="grid gap-6"
         onSubmit={form.handleSubmit(async (values) => {
+          if (savingRef.current) return;
+          savingRef.current = true;
+          setSaving(true);
           remember();
           const skus = values.variants.map((variant) => variant.sku.trim().toLocaleLowerCase("fr"));
           if (new Set(skus).size !== skus.length) {
+            savingRef.current = false;
+            setSaving(false);
             form.setError("root", { message: copy.duplicateSku });
             return;
           }
           const photoWithoutColor = variants.fields.some((field, index) => variantFiles[field.id] && !values.variants[index]?.color.trim());
           if (photoWithoutColor) {
+            savingRef.current = false;
+            setSaving(false);
             form.setError("root", { message: copy.variantPhotoNeedsColor });
             return;
           }
           const result = await saveProduct(values);
           if (!result.ok) {
+            savingRef.current = false;
+            setSaving(false);
             form.setError("root", { message: messageFor(dict, result.code) });
             return;
           }
@@ -144,12 +155,16 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
           for (const data of uploads) {
             const uploaded = await uploadProductImage(data);
             if (!uploaded.ok) {
+              savingRef.current = false;
+              setSaving(false);
               drafts.set(draftKey, { ...form.getValues(), id: result.id });
               form.setValue("id", result.id);
               form.setError("root", { message: messageFor(dict, uploaded.code) });
               return;
             }
           }
+          setCoverFile(null);
+          setVariantFiles({});
           drafts.delete(draftKey);
           drafts.delete(result.id);
           router.push(`/admin/products/${result.id}`);
@@ -255,7 +270,7 @@ export function ProductForm({ product, categories }: { product: CatalogProduct |
           </div>
         </div>
         {error ? <Notice tone="danger">{error}{missing.length ? ` ${missing.join(", ")}.` : ""}</Notice> : null}
-        <button className="btn btn-primary w-fit" type="submit">{dict.common.save}</button>
+        <button className="btn btn-primary w-fit" type="submit" disabled={saving}>{dict.common.save}</button>
       </form>
       {product ? <ColorPhotos product={product} draftColors={draftColors} /> : null}
     </div>
