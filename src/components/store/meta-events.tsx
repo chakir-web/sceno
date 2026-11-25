@@ -2,10 +2,9 @@
 
 import { useEffect } from "react";
 import { useProductColor } from "@/components/store/product-color";
-import { colorKey } from "@/lib/catalog/images";
 import { trackViewItem } from "@/lib/analytics/ga";
 import { metaFunnelEventId } from "@/lib/meta/event-id";
-import { getMetaProductData } from "@/lib/meta/product";
+import { getMetaProductData, variantForSelection } from "@/lib/meta/product";
 import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok } from "@/lib/tiktok/pixel";
@@ -13,9 +12,8 @@ import { unitPrice } from "@/lib/pricing";
 import type { CatalogProduct } from "@/types/commerce";
 
 export function ProductView({ product }: { product: CatalogProduct }) {
-  const selected = useProductColor()?.color ?? null;
-  const variant = product.variants.find((item) => item.isActive && colorKey(item.color) === colorKey(selected))
-    ?? product.variants.find((item) => item.isActive);
+  const selection = useProductColor();
+  const variant = variantForSelection(product.variants, { variantId: selection?.variantId, color: selection?.color });
   const value = unitPrice(product.priceMad, product.promoPriceMad, variant?.priceMad ?? null);
   const contentId = catalogContentId(product, variant);
 

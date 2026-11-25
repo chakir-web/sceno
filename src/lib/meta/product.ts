@@ -1,3 +1,4 @@
+import { colorKey } from "@/lib/catalog/images";
 import { roundMoney } from "@/lib/pricing";
 
 export type MetaItem = { id: string; quantity: number; item_price?: number };
@@ -26,6 +27,17 @@ function quantityOf(value: number | undefined) {
 function priceOf(value: number | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
   return roundMoney(value);
+}
+
+export function variantForSelection<T extends { id: string; isActive: boolean; color?: string | null }>(
+  variants: T[],
+  selection?: { variantId?: string | null; color?: string | null },
+) {
+  const active = variants.filter((item) => item.isActive);
+  const byId = selection?.variantId ? active.find((item) => item.id === selection.variantId) : undefined;
+  if (byId) return byId;
+  const byColor = active.find((item) => colorKey(item.color) === colorKey(selection?.color));
+  return byColor ?? active[0];
 }
 
 /** Identifiant catalogue : SKU variante, puis SKU produit, puis id Supabase. */
@@ -76,5 +88,22 @@ export function getMetaCartData(
     num_items: contents.reduce((sum, item) => sum + item.quantity, 0),
     currency: "MAD",
     ...(total !== undefined ? { value: total } : {}),
+  };
+}
+
+/** Paramètres Pixel d'un Purchase. La devise reste le code ISO MAD, jamais un symbole. */
+export function purchasePixelData(meta: MetaCommerce, value: number) {
+  const amount = priceOf(value);
+  return {
+    content_ids: meta.content_ids,
+    content_type: "product" as const,
+    contents: meta.contents.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      ...(item.item_price !== undefined ? { item_price: item.item_price } : {}),
+    })),
+    num_items: meta.num_items,
+    currency: "MAD" as const,
+    ...(amount !== undefined ? { value: amount } : {}),
   };
 }

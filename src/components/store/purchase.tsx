@@ -19,7 +19,9 @@ export { Gallery } from "@/components/store/gallery";
 export function AddToCart({ product }: { product: CatalogProduct }) {
   const { dict, locale } = useI18n();
   const { add } = useCart();
-  const setColor = useProductColor()?.setColor;
+  const selection = useProductColor();
+  const setColor = selection?.setColor;
+  const setSelectionId = selection?.setVariantId;
   const variants = product.variants.filter((variant) => variant.isActive);
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -32,7 +34,8 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
   const variant = variants.find((item) => item.id === variantId) ?? variants[0];
   useEffect(() => {
     setColor?.(variant?.color ?? null);
-  }, [setColor, variant?.color]);
+    setSelectionId?.(variant?.id ?? null);
+  }, [setColor, setSelectionId, variant?.color, variant?.id]);
   const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : unitPrice(product.priceMad, product.promoPriceMad, null);
   const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
   const colors = useMemo(() => variants.filter((item) => !variant?.size || item.size === variant.size), [variant, variants]);

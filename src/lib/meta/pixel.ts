@@ -30,7 +30,7 @@ function debugMeta(event: string, params: MetaParams | undefined, eventID?: stri
     content_type: params?.content_type === "product" ? "product" : "",
     contents,
     value: typeof params?.value === "number" ? params.value : null,
-    currency: params?.currency === "MAD" ? "MAD" : "",
+    currency: typeof params?.currency === "string" ? params.currency : "",
   });
 }
 

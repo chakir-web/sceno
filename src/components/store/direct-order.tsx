@@ -9,8 +9,9 @@ import { useI18n } from "@/components/providers";
 import { CitySelect } from "@/components/store/city-select";
 import { useProductColor } from "@/components/store/product-color";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/ga";
+import { browserSessionStorage, initialFunnelSent, nextDirectFunnelEvents, readFunnelSent, shouldSendPurchase, writeFunnelSent } from "@/lib/meta/direct-funnel";
 import { metaFunnelEventId, metaPurchaseEventId } from "@/lib/meta/event-id";
-import { getMetaProductData } from "@/lib/meta/product";
+import { getMetaProductData, purchasePixelData } from "@/lib/meta/product";
 import { reportMeta, trackMeta } from "@/lib/meta/pixel";
 import { normalizeMoroccanPhone } from "@/lib/phone";
 import { unitPrice } from "@/lib/pricing";
@@ -55,7 +56,9 @@ export function DirectOrder({
   defaultCity: string;
 }) {
   const { dict, locale } = useI18n();
-  const setColor = useProductColor()?.setColor;
+  const selection = useProductColor();
+  const setColor = selection?.setColor;
+  const setSelectionId = selection?.setVariantId;
   const variants = product.variants.filter((variant) => variant.isActive);
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -67,9 +70,13 @@ export function DirectOrder({
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState<Confirmation | null>(null);
   const idempotency = useRef("");
-  const started = useRef(false);
+  const funnelSent = useRef(initialFunnelSent());
+  const funnelProduct = useRef("");
   const sending = useRef(false);
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { fullName: "", phone: "", address: "" } });
+  const watchedName = form.watch("fullName");
+  const watchedPhone = form.watch("phone");
+  const watchedAddress = form.watch("address");
   const variant = variants.find((item) => item.id === variantId) ?? variants[0];
   const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : 0;
   const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
@@ -84,7 +91,8 @@ export function DirectOrder({
 
   useEffect(() => {
     setColor?.(variant?.color ?? null);
-  }, [setColor, variant?.color]);
+    setSelectionId?.(variant?.id ?? null);
+  }, [setColor, setSelectionId, variant?.color, variant?.id]);
 
   useEffect(() => {
     if (!variant || resolvedCity.length < 2) return;
@@ -126,18 +134,34 @@ export function DirectOrder({
     return "";
   }
 
-  function beginCheckout() {
-    if (started.current || !variant) return;
-    started.current = true;
+  function emitDirectFunnel() {
+    if (!variant || done) return;
+    const storage = browserSessionStorage();
+    const current = funnelProduct.current === product.id ? funnelSent.current : readFunnelSent(storage, product.id);
+    funnelProduct.current = product.id;
+    const decision = nextDirectFunnelEvents(current, {
+      fullName: form.getValues("fullName"),
+      phone: form.getValues("phone"),
+      address: form.getValues("address"),
+      city: resolvedCity,
+    });
+    if (!decision.fireAddToCart && !decision.fireInitiateCheckout) {
+      funnelSent.current = decision.sent;
+      return;
+    }
+    const meta = getMetaProductData(product, { variantSku: variant.sku, quantity: orderedQuantity, unitPrice: price });
+    if (!meta) return;
+    funnelSent.current = decision.sent;
+    writeFunnelSent(storage, product.id, decision.sent);
+    if (decision.fireAddToCart) reportMeta("AddToCart", meta, metaFunnelEventId("AddToCart"));
+    if (!decision.fireInitiateCheckout) return;
+    reportMeta("InitiateCheckout", meta, metaFunnelEventId("InitiateCheckout"));
     const value = price * orderedQuantity;
-    const commerce = tiktokCommerce(
+    reportTikTok("InitiateCheckout", tiktokCommerce(
       [{ id: catalogContentId(product, variant), name: product.name, quantity: orderedQuantity, price }],
       value,
       product.categoryName ?? undefined,
-    );
-    const meta = getMetaProductData(product, { variantSku: variant.sku, quantity: orderedQuantity, unitPrice: price });
-    if (meta) reportMeta("InitiateCheckout", meta, metaFunnelEventId("InitiateCheckout"));
-    reportTikTok("InitiateCheckout", commerce, crypto.randomUUID());
+    ), crypto.randomUUID());
     trackBeginCheckout([{
       id: catalogContentId(product, variant),
       name: product.name,
@@ -148,14 +172,21 @@ export function DirectOrder({
     }], value);
   }
 
+  const emitFunnelRef = useRef(emitDirectFunnel);
+  emitFunnelRef.current = emitDirectFunnel;
+  useEffect(() => {
+    emitFunnelRef.current();
+  }, [watchedName, watchedPhone, watchedAddress, resolvedCity, variant?.id, variant?.sku, price, orderedQuantity, done]);
+
   async function submit(values: FormValues) {
     if (sending.current || done || !variant) return;
     sending.current = true;
     if (resolvedCity.length < 2) {
       setCityError(dict.errors.invalid_city);
+      sending.current = false;
       return;
     }
-    beginCheckout();
+    emitDirectFunnel();
     setPending(true);
     setError("");
     try {
@@ -189,24 +220,15 @@ export function DirectOrder({
             product.categoryName ?? undefined,
           )
           : null;
-      if (purchase) {
+      if (shouldSendPurchase(order)) {
         const meta = getMetaProductData(product, {
           variantSku: variant.sku,
           quantity: orderedQuantity,
           unitPrice: price,
         });
-        if (meta) {
-          trackMeta("Purchase", {
-            content_ids: meta.content_ids,
-            content_type: meta.content_type,
-            contents: meta.contents,
-            num_items: meta.num_items,
-            currency: meta.currency,
-            value: Number(order.total_mad ?? quote?.totalMad ?? 0),
-          }, metaPurchaseEventId(order.order_number));
-        }
-        trackTikTok("Purchase", purchase, order.order_number);
+        if (meta) trackMeta("Purchase", purchasePixelData(meta, Number(order.total_mad ?? quote?.totalMad ?? 0)), metaPurchaseEventId(order.order_number));
       }
+      if (purchase) trackTikTok("Purchase", purchase, order.order_number);
       if (!order.replayed) {
         const lines = quote?.lines?.length ? quote.lines : [{
           sku: variant.sku || product.sku,
@@ -331,7 +353,6 @@ export function DirectOrder({
           else setCityError("");
           void form.handleSubmit(submit)(event);
         }}
-        onFocusCapture={beginCheckout}
       >
         <label className="grid gap-2 text-sm">
           {dict.direct.fullName}
