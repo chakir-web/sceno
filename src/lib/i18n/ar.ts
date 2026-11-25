@@ -184,6 +184,7 @@ export const ar: Dictionary = {
     thanks: "شكراً لطلبك! سنتصل بك قريباً لتأكيد التوصيل.",
     continue: "متابعة التصفح",
     required: "هذا الحقل مطلوب.",
+    whatsapp: "اطلب عبر واتساب",
   },
   success: {
     title: "تم تسجيل الطلب",

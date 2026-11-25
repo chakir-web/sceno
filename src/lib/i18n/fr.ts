@@ -184,6 +184,7 @@ export const fr = {
     thanks: "Merci pour votre commande ! Nous allons vous contacter prochainement pour confirmer votre livraison.",
     continue: "Continuer sur le site",
     required: "Ce champ est obligatoire.",
+    whatsapp: "Commander sur WhatsApp",
   },
   success: {
     title: "Commande enregistrée",

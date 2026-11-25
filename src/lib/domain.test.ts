@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csvRecords, parseCsv, toCsv } from "@/lib/csv";
-import { formatPhone, normalizeMoroccanPhone } from "@/lib/phone";
+import { formatPhone, normalizeMoroccanPhone, whatsappHref } from "@/lib/phone";
 import {
   lineTotal,
   orderTotal,
@@ -34,6 +34,10 @@ describe("téléphone marocain", () => {
 
   it("formate un numéro national", () => {
     expect(formatPhone("0612345678")).toBe("06 12 34 56 78");
+  });
+
+  it("ouvre WhatsApp au format international", () => {
+    expect(whatsappHref("0775588894")).toBe("https://wa.me/212775588894");
   });
 });
 

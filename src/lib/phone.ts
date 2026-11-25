@@ -25,3 +25,9 @@ export function phoneHref(national: string) {
   if (!normalized) return `tel:${national.replace(/\s/g, "")}`;
   return `tel:+212${normalized.slice(1)}`;
 }
+
+export function whatsappHref(national: string) {
+  const normalized = normalizeMoroccanPhone(national);
+  const digits = normalized ? `212${normalized.slice(1)}` : national.replace(/\D/g, "");
+  return `https://wa.me/${digits}`;
+}
