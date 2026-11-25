@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { Media } from "@/components/store/media";
-import { QuickAdd } from "@/components/store/purchase";
 import type { Locale } from "@/lib/i18n/locales";
 import { displayPrice } from "@/lib/services/catalog";
-import { formatMoney } from "@/lib/utils";
+import { StorePrice } from "@/components/store/price";
 import type { CatalogProduct } from "@/types/commerce";
 
-export function ProductCard({ product, locale, promoLabel, soldOut }: { product: CatalogProduct; locale: Locale; promoLabel: string; soldOut: string }) {
+export function ProductCard({ product, locale, promoLabel, soldOut, addLabel }: { product: CatalogProduct; locale: Locale; promoLabel: string; soldOut: string; addLabel: string }) {
   const price = displayPrice(product);
   return (
-    <article>
-    <Link href={`/products/${product.slug}`} className="group block">
+    <article className="flex h-full flex-col">
+    <Link href={`/products/${product.slug}`} className="group block flex-1">
       <div className="relative aspect-[4/5] overflow-hidden bg-mist">
         <Media src={product.images[0]?.url ?? null} alt={product.name} className="transition duration-500 group-hover:scale-[1.03]" />
         {product.stockQuantity <= 0 ? <span className="absolute start-3 top-3 bg-ink px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-ivory">{soldOut}</span> : null}
@@ -19,13 +18,12 @@ export function ProductCard({ product, locale, promoLabel, soldOut }: { product:
       <div className="mt-3">
         <p className="text-[11px] uppercase tracking-[0.16em] text-stone">{product.categoryName}</p>
         <h3 className="mt-1 text-sm leading-5">{product.name}</h3>
-        <div className="mt-2 flex items-baseline gap-2">
-          <p className="text-sm">{formatMoney(price.amount, locale)}</p>
-          {price.compare ? <p className="text-xs text-stone line-through">{formatMoney(price.compare, locale)}</p> : null}
+        <div className="mt-2">
+          <StorePrice amount={price.amount} compare={price.compare} locale={locale} />
         </div>
       </div>
     </Link>
-    <QuickAdd product={product} />
+    <Link href={`/products/${product.slug}`} className="btn btn-primary mt-3 w-full px-2 text-center text-xs leading-4">{addLabel}</Link>
     </article>
   );
 }

@@ -6,12 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatMoney(amount: number, locale: Locale) {
+export function formatMoney(amount: number, locale: Locale, fractionDigits = 2) {
   return new Intl.NumberFormat(locale === "ar" ? "ar-MA" : "fr-MA", {
     style: "currency",
     currency: "MAD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(amount);
 }
 

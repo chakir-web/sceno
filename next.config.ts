@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
     ],
   },
+  async redirects() {
+    return [
+      { source: "/cart", destination: "/products", permanent: false },
+      { source: "/checkout", destination: "/products", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

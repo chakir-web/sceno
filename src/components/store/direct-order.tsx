@@ -17,12 +17,12 @@ import { unitPrice } from "@/lib/pricing";
 import { catalogContentId, tiktokCommerce, type TikTokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok, trackTikTok } from "@/lib/tiktok/pixel";
 import type { Quote } from "@/lib/services/checkout";
+import { StorePrice } from "@/components/store/price";
 import { formatMoney } from "@/lib/utils";
 import type { CatalogProduct } from "@/types/commerce";
 
 const formSchema = z.object({
-  firstName: z.string().trim().min(2, "name"),
-  lastName: z.string().trim().min(2, "name"),
+  fullName: z.string().trim().min(3, "name").max(120, "name"),
   phone: z.string().trim().min(8, "phone").refine((value) => normalizeMoroccanPhone(value) !== null, { message: "phone" }),
   address: z.string().trim().min(5, "address"),
 });
@@ -69,7 +69,7 @@ export function DirectOrder({
   const idempotency = useRef("");
   const started = useRef(false);
   const sending = useRef(false);
-  const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { firstName: "", lastName: "", phone: "", address: "" } });
+  const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { fullName: "", phone: "", address: "" } });
   const variant = variants.find((item) => item.id === variantId) ?? variants[0];
   const price = variant ? unitPrice(product.priceMad, product.promoPriceMad, variant.priceMad) : 0;
   const sizes = useMemo(() => Array.from(new Set(variants.map((item) => item.size).filter(Boolean))), [variants]);
@@ -121,7 +121,7 @@ export function DirectOrder({
     const code = form.formState.errors[name]?.message;
     if (code === "phone") return dict.errors.invalid_phone;
     if (code === "address") return dict.errors.invalid_address;
-    if (code === "name") return dict.direct.required;
+    if (code === "name") return dict.errors.invalid_name;
     if (code) return dict.direct.required;
     return "";
   }
@@ -163,7 +163,7 @@ export function DirectOrder({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: `${values.firstName.trim()} ${values.lastName.trim()}`,
+          fullName: values.fullName.trim(),
           phone: values.phone,
           address: values.address,
           notes: "",
@@ -258,7 +258,7 @@ export function DirectOrder({
           <div className="flex justify-between gap-3"><dt>{dict.direct.product}</dt><dd>{done.name}</dd></div>
           <div className="flex justify-between gap-3"><dt>{dict.direct.quantity}</dt><dd>{done.quantity}</dd></div>
           <div className="flex justify-between gap-3"><dt>{dict.checkout.city}</dt><dd>{done.city}</dd></div>
-          <div className="flex justify-between gap-3 text-base"><dt>{dict.direct.total}</dt><dd>{formatMoney(done.total, locale)}</dd></div>
+          <div className="flex justify-between gap-3 text-base"><dt>{dict.direct.total}</dt><dd>{formatMoney(done.total, locale, 0)}</dd></div>
         </dl>
         <p className="text-xs uppercase tracking-[0.14em] text-champagne">{dict.checkout.cod}</p>
         <Link className="btn btn-ghost" href="/">{dict.direct.continue}</Link>
@@ -277,8 +277,9 @@ export function DirectOrder({
       <div>
         <p className="text-[11px] uppercase tracking-[0.18em] text-champagne">{product.categoryName}</p>
         <h1 className="mt-3 font-display text-5xl">{product.name}</h1>
-        <p className="mt-4 font-display text-5xl">{formatMoney(price, locale)}</p>
-        {price < product.priceMad ? <p className="text-sm text-stone line-through">{formatMoney(product.priceMad, locale)}</p> : null}
+        <div className="mt-4">
+          <StorePrice amount={price} compare={product.priceMad} locale={locale} size="lg" />
+        </div>
         {product.shortDescription ? <p className="mt-4 max-w-xl text-sm leading-7 text-stone">{product.shortDescription}</p> : null}
       </div>
       {benefits.length ? (
@@ -333,14 +334,9 @@ export function DirectOrder({
         onFocusCapture={beginCheckout}
       >
         <label className="grid gap-2 text-sm">
-          {dict.direct.firstName}
-          <input className="field" autoComplete="given-name" {...form.register("firstName")} />
-          {fieldMessage("firstName") ? <span className="text-red-900">{fieldMessage("firstName")}</span> : null}
-        </label>
-        <label className="grid gap-2 text-sm">
-          {dict.direct.lastName}
-          <input className="field" autoComplete="family-name" {...form.register("lastName")} />
-          {fieldMessage("lastName") ? <span className="text-red-900">{fieldMessage("lastName")}</span> : null}
+          {dict.direct.fullName}
+          <input className="field" autoComplete="name" {...form.register("fullName")} />
+          {fieldMessage("fullName") ? <span className="text-red-900">{fieldMessage("fullName")}</span> : null}
         </label>
         <label className="grid gap-2 text-sm">
           {dict.checkout.phone}
@@ -361,10 +357,10 @@ export function DirectOrder({
         <aside className="grid gap-2 border border-line p-4 text-sm">
           <h2 className="font-display text-2xl">{dict.direct.summary}</h2>
           <div className="flex justify-between gap-3"><span>{dict.direct.product}</span><span>{product.name}</span></div>
-          <div className="flex justify-between gap-3"><span>{dict.direct.price}</span><span>{formatMoney(price, locale)}</span></div>
+          <div className="flex justify-between gap-3"><span>{dict.direct.price}</span><span className="font-semibold text-office-success">{formatMoney(price, locale, 0)}</span></div>
           <div className="flex justify-between gap-3"><span>{dict.direct.quantity}</span><span>{orderedQuantity}</span></div>
-          <div className="flex justify-between gap-3"><span>{dict.direct.shipping}</span><span>{quote ? (quote.shippingFeeMad > 0 ? formatMoney(quote.shippingFeeMad, locale) : dict.checkout.shippingFree) : dict.checkout.quoting}</span></div>
-          <div className="flex justify-between gap-3 border-t border-line pt-2 text-base"><span>{dict.direct.total}</span><span>{quote ? formatMoney(quote.totalMad, locale) : "—"}</span></div>
+          <div className="flex justify-between gap-3"><span>{dict.direct.shipping}</span><span>{quote ? (quote.shippingFeeMad > 0 ? formatMoney(quote.shippingFeeMad, locale, 0) : dict.checkout.shippingFree) : dict.checkout.quoting}</span></div>
+          <div className="flex justify-between gap-3 border-t border-line pt-2 text-base"><span>{dict.direct.total}</span><span>{quote ? formatMoney(quote.totalMad, locale, 0) : "—"}</span></div>
           <p className="text-xs uppercase tracking-[0.14em] text-champagne">{dict.checkout.cod}</p>
         </aside>
         {error ? <p className="text-sm text-red-900">{error}</p> : null}

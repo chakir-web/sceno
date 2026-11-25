@@ -1,42 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Logo } from "@/components/brand/logo";
-import { CartDrawer } from "@/components/store/cart-drawer";
-import { useCart } from "@/components/providers";
 import type { Dictionary } from "@/lib/i18n/fr";
 import type { Locale } from "@/lib/i18n/locales";
 import type { CatalogCategory } from "@/types/commerce";
 
-export function CartButton({ label }: { label: string }) {
-  const { count, bump, openDrawer } = useCart();
-  const [pop, setPop] = useState(false);
-  useEffect(() => {
-    if (!bump || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    setPop(true);
-    const timer = window.setTimeout(() => setPop(false), 420);
-    return () => window.clearTimeout(timer);
-  }, [bump]);
-  return (
-    <>
-      <button type="button" className="relative grid h-11 w-11 place-items-center border border-line" aria-label={`${label}${count ? ` ${count}` : ""}`} onClick={openDrawer}>
-        <ShoppingBag size={18} />
-        {count > 0 ? (
-          <span className={`absolute -end-1 -top-1 grid h-5 min-w-5 place-items-center px-1 text-[10px] text-ivory ${pop ? "cart-badge-pop" : "bg-ink"}`}>{count}</span>
-        ) : null}
-      </button>
-      <CartDrawer />
-    </>
-  );
-}
-
 export function MobileNav({ dict, categories }: { locale: Locale; dict: Dictionary; categories: CatalogCategory[] }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { openDrawer } = useCart();
   useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (!open) return;
@@ -70,7 +45,6 @@ export function MobileNav({ dict, categories }: { locale: Locale; dict: Dictiona
               <Link href="/" onClick={() => setOpen(false)}>{dict.nav.home}</Link>
               <Link href="/products" onClick={() => setOpen(false)}>{dict.nav.shop}</Link>
               <Link href="/track-order" onClick={() => setOpen(false)}>{dict.nav.track}</Link>
-              <button type="button" className="text-start text-lg" onClick={() => { setOpen(false); openDrawer(); }}>{dict.nav.cart}</button>
               {categories.map((category) => (
                 <Link key={category.id} href={`/categories/${category.slug}`} onClick={() => setOpen(false)}>{category.name}</Link>
               ))}

@@ -170,8 +170,7 @@ export const fr = {
     quoteError: "Impossible de calculer le total. Vérifiez le stock et la connexion.",
   },
   direct: {
-    firstName: "Prénom",
-    lastName: "Nom",
+    fullName: "Nom complet",
     order: "COMMANDER MAINTENANT",
     ordering: "Commande en cours…",
     advantages: "Avantages",

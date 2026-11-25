@@ -11,7 +11,7 @@ import { catalogContentId, tiktokCommerce } from "@/lib/tiktok/commerce";
 import { reportTikTok } from "@/lib/tiktok/pixel";
 import { unitPrice } from "@/lib/pricing";
 import { useProductColor } from "@/components/store/product-color";
-import { formatMoney } from "@/lib/utils";
+import { StorePrice } from "@/components/store/price";
 import type { CatalogProduct } from "@/types/commerce";
 
 export { Gallery } from "@/components/store/gallery";
@@ -41,8 +41,7 @@ export function AddToCart({ product }: { product: CatalogProduct }) {
   return (
     <div className="mt-8 grid gap-5">
       <div>
-        <p className="font-display text-4xl">{formatMoney(price, locale)}</p>
-        {price < product.priceMad ? <p className="text-sm text-stone line-through">{formatMoney(product.priceMad, locale)}</p> : null}
+        <StorePrice amount={price} compare={product.priceMad} locale={locale} size="lg" />
       </div>
       {sizes.length > 0 ? (
         <label className="grid gap-2 text-sm">

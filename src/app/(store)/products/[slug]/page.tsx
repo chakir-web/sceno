@@ -41,7 +41,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <section className="mt-16">
           <h2 className="font-display text-4xl">{dict.product.similar}</h2>
           <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {similar.map((item) => <ProductCard key={item.id} product={item} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} />)}
+            {similar.map((item) => <ProductCard key={item.id} product={item} locale={locale} promoLabel={dict.catalog.promo} soldOut={dict.catalog.soldOut} addLabel={dict.product.add} />)}
           </div>
         </section>
       ) : null}

@@ -170,8 +170,7 @@ export const ar: Dictionary = {
     quoteError: "تعذر حساب المجموع. تحقق من المخزون والاتصال.",
   },
   direct: {
-    firstName: "الاسم الشخصي",
-    lastName: "الاسم العائلي",
+    fullName: "الاسم الكامل",
     order: "اطلب الآن",
     ordering: "جارٍ إنشاء الطلب…",
     advantages: "المزايا",

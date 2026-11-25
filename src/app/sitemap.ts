@@ -9,8 +9,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     "",
     "/products",
-    "/cart",
-    "/checkout",
     "/track-order",
     "/suivi-commande",
     ...products.map((product) => `/products/${product.slug}`),

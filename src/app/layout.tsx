@@ -9,7 +9,7 @@ import { direction } from "@/lib/i18n/locales";
 import { siteUrl } from "@/lib/utils";
 import "./globals.css";
 
-const sans = Outfit({ subsets: ["latin"], variable: "--font-sans" });
+const sans = Outfit({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-sans" });
 const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-display" });
 const arabic = Noto_Sans_Arabic({ subsets: ["arabic"], weight: ["400", "500", "600"], variable: "--font-arabic" });
 

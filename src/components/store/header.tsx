@@ -4,7 +4,7 @@ import { setLocale } from "@/lib/actions/auth";
 import type { Dictionary } from "@/lib/i18n/fr";
 import type { Locale } from "@/lib/i18n/locales";
 import type { CatalogCategory } from "@/types/commerce";
-import { CartButton, MobileNav } from "@/components/store/nav-client";
+import { MobileNav } from "@/components/store/nav-client";
 
 export function Header({ locale, dict, categories }: { locale: Locale; dict: Dictionary; categories: CatalogCategory[] }) {
   return (
@@ -32,7 +32,6 @@ export function Header({ locale, dict, categories }: { locale: Locale; dict: Dic
               </button>
             ))}
           </form>
-          <CartButton label={dict.nav.cart} />
         </div>
       </div>
     </header>
