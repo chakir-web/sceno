@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { DirectOrder } from "@/components/store/direct-order";
 import { ProductView } from "@/components/store/meta-events";
 import { ProductColorProvider } from "@/components/store/product-color";
-import { AddToCart, Gallery } from "@/components/store/purchase";
+import { Gallery } from "@/components/store/purchase";
 import { ProductCard } from "@/components/store/product-card";
 import { getI18n } from "@/lib/i18n/server";
 import { getProductBySlug, listSimilar } from "@/lib/services/catalog";
@@ -23,29 +23,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { locale, dict } = await getI18n();
   const product = await getProductBySlug(slug, locale);
   if (!product.data) notFound();
-  const direct = product.data.slug === "poncho-nuage";
-  const similar = direct ? [] : await listSimilar(product.data, locale);
-  const rates = direct ? await listRates(false) : null;
-  const cities = rates?.data.map((rate) => ({ city: rate.city, feeMad: rate.feeMad })) ?? [];
+  const landing = product.data.slug === "poncho-nuage";
+  const similar = landing ? [] : await listSimilar(product.data, locale);
+  const rates = await listRates(false);
+  const cities = rates.data.map((rate) => ({ city: rate.city, feeMad: rate.feeMad }));
   return (
     <article>
-      {direct ? null : <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>}
+      {landing ? null : <Link href="/products" className="text-sm text-stone">{dict.product.back}</Link>}
       <ProductColorProvider product={product.data}>
       <ProductView product={product.data} />
       <div className="mt-6 grid items-start gap-10 lg:grid-cols-2">
         <Gallery product={product.data} />
-        {direct ? (
-          <DirectOrder product={product.data} cities={cities} defaultCity="" />
-        ) : (
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-champagne">{product.data.categoryName}</p>
-          <h1 className="mt-3 font-display text-5xl md:text-6xl">{product.data.name}</h1>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-stone">{product.data.shortDescription}</p>
-          <AddToCart product={product.data} />
-          <h2 className="mt-10 text-[11px] uppercase tracking-[0.16em] text-stone">{dict.product.description}</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-7">{product.data.description}</p>
-        </div>
-        )}
+        <DirectOrder product={product.data} cities={cities} defaultCity="" />
       </div>
       </ProductColorProvider>
       {similar.length ? (
